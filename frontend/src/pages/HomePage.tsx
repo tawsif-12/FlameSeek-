@@ -24,9 +24,8 @@ import {
   Plus,
   Minus,
 } from "lucide-react";
-import { getCurrentHotspots, getEvents } from "../api/client";
-import { DEFAULT_SENSORS } from "../context/AppContext";
-import type { FireEventSummary, HotspotRecord } from "../types/api";
+import { getHarmonizedHotspots, normalizeApiError } from "../api/client";
+import type { HotspotRecord } from "../types/api";
 import OutcrowdEarthSatellite from "../components/OutcrowdEarthSatellite";
 import Satellite3DCoverflow from "../components/Satellite3DCoverflow";
 import Pipeline3DTransition from "../components/Pipeline3DTransition";
@@ -59,7 +58,6 @@ function formatAge(date: string) {
 
 export default function HomePage() {
   const [hotspots, setHotspots] = useState<HotspotRecord[]>([]);
-  const [events, setEvents] = useState<FireEventSummary[]>([]);
   const [counts, setCounts] = useState<SensorCounts>(EMPTY_COUNTS);
   const [totalDetections, setTotalDetections] = useState<number | null>(null);
   const [sourceMode, setSourceMode] = useState<"live" | "cached" | "demo" | "unavailable">("live");
@@ -70,55 +68,35 @@ export default function HomePage() {
 
   useEffect(() => {
     let cancelled = false;
-    const loadHotspots = async () => {
-      try {
-        return { response: await getCurrentHotspots(DEFAULT_SENSORS, 1, 600, undefined, false), usedDemo: false };
-      } catch {
-        return { response: await getCurrentHotspots(DEFAULT_SENSORS, 1, 600, undefined, true), usedDemo: true };
-      }
-    };
-    const loadEvents = async () => {
-      try {
-        return await getEvents(2, 40, false);
-      } catch {
-        return await getEvents(2, 40, true);
-      }
-    };
-
-    Promise.allSettled([loadHotspots()]).then(([hotspotResult]) => {
+    getHarmonizedHotspots(1).then((response) => {
       if (cancelled) return;
-
-      if (hotspotResult.status === "fulfilled") {
-        const { response, usedDemo } = hotspotResult.value;
-        const bySensor = (response.metadata.filtered_by_sensor ?? response.metadata.returned_by_sensor ?? {}) as Record<string, number>;
-        setHotspots(response.hotspots);
-        setCounts({
-          modis: Number(bySensor.modis ?? 0),
-          viirs_snpp: Number(bySensor.viirs_snpp ?? 0),
-          viirs_noaa20: Number(bySensor.viirs_noaa20 ?? 0),
-          viirs_noaa21: Number(bySensor.viirs_noaa21 ?? 0),
-        });
-        setTotalDetections(Number(response.metadata.filtered_hotspot_count ?? response.hotspots.length));
-        const dataSource = String(response.metadata.data_source ?? "live");
-        setSourceMode(usedDemo || dataSource === "demo" ? "demo" : dataSource.includes("cached") ? "cached" : "live");
-        setUpdatedAt(new Date());
-      } else {
-        setSourceMode("unavailable");
-        setError("We could not load recent NASA observations. Open the fire map to retry.");
+      const observations = response.raw_hotspots ?? response.hotspots;
+      const bySensor: SensorCounts = { ...EMPTY_COUNTS };
+      for (const point of observations) {
+        if (Object.prototype.hasOwnProperty.call(bySensor, point.sensor)) bySensor[point.sensor as keyof SensorCounts]++;
       }
-
-
-      setLoading(false);
-    });
-    loadEvents().then((result) => { if (!cancelled) setEvents(result.events); }).catch(() => {});
+      setHotspots(observations);
+      setCounts(bySensor);
+      setTotalDetections(observations.length);
+      const dataSource = String(response.metadata.data_source ?? "live");
+      setSourceMode(dataSource.includes("cached") ? "cached" : "live");
+      setUpdatedAt(new Date(String(response.metadata.snapshot_at ?? new Date().toISOString())));
+      setError(response.metadata.partial_coverage
+        ? "Some NASA satellite feeds are unavailable. Totals include only the observations currently returned."
+        : null);
+    }).catch((error) => {
+      if (cancelled) return;
+      setSourceMode("unavailable");
+      setError(`Recent NASA observations unavailable: ${normalizeApiError(error)}. Try reloading the page.`);
+    }).finally(() => { if (!cancelled) setLoading(false); });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const latestEvents = useMemo(
-    () => [...events].sort((a, b) => +new Date(b.latest_detection) - +new Date(a.latest_detection)).slice(0, 4),
-    [events]
+  const latestObservations = useMemo(
+    () => [...hotspots].sort((a, b) => +new Date(b.acq_datetime) - +new Date(a.acq_datetime)).slice(0, 4),
+    [hotspots]
   );
   const globeHotspots = useMemo(() => {
     const cells = new Set<string>();
@@ -368,12 +346,12 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Right Panel: Reconstructed Active Wildfire Events */}
+          {/* Recent observations from the same live feed as the map. */}
           <div className="oc-dashboard-panel">
             <div className="oc-panel-header">
               <span className="oc-panel-title">
                 <Flame size={16} />
-                Recent groups of fire detections
+                Recent satellite heat detections
               </span>
               <Link to="/fire-map" style={{ color: "var(--oc-cyan)", fontSize: 12, textDecoration: "none" }}>
                 Open fire map
@@ -381,39 +359,36 @@ export default function HomePage() {
             </div>
 
             <div className="oc-event-list">
-              {latestEvents.map((event) => (
-                <Link to={`/fire-map?event=${event.event_id}`} key={event.event_id} className="oc-event-row">
+              {latestObservations.map((point, index) => (
+                <Link to="/fire-map" key={`${point.sensor}-${point.acq_datetime}-${point.lat}-${point.lon}-${index}`} className="oc-event-row">
                   <div className="oc-event-left">
                     <span className="oc-event-flare" />
                     <div>
                       <div className="oc-event-place">
-                        {`Detections near ${event.centroid.lat.toFixed(2)}°, ${event.centroid.lon.toFixed(2)}°`}
+                        {`Detections near ${point.lat.toFixed(2)}°, ${point.lon.toFixed(2)}°`}
                       </div>
                       <div className="oc-event-sub">
-                        <span>{event.observation_count} heat detections</span>
+                        <span>Individual satellite detection</span>
                         <span>•</span>
-                        <span>{Math.round(event.max_frp ?? 0)} MW peak heat output</span>
+                        <span>{Math.round(point.frp ?? 0)} MW fire radiative power</span>
                         <span>•</span>
                         <span>
-                          {event.sensors
-                            .map((s) => (s.toLowerCase().includes("modis") ? "MODIS" : "VIIRS"))
-                            .filter((v, idx, arr) => arr.indexOf(v) === idx)
-                            .join(" + ")}
+                          {point.sensor === "modis" ? "MODIS" : "VIIRS"} / {point.satellite}
                         </span>
                       </div>
                     </div>
                   </div>
 
                   <div className="oc-event-right">
-                    <span className="oc-event-age">{formatAge(event.latest_detection)}</span>
+                    <span className="oc-event-age">{formatAge(point.acq_datetime)}</span>
                     <ChevronRight size={14} color="#64748b" />
                   </div>
                 </Link>
               ))}
 
-              {!latestEvents.length && (
+              {!latestObservations.length && (
                 <div style={{ textAlign: "center", padding: "40px 0", color: "var(--oc-text-muted)", fontSize: 13 }}>
-                  No recent fire groups loaded. Open the map to check again.
+                  {loading ? "Loading recent satellite observations..." : error ?? "No recent satellite observations available."}
                 </div>
               )}
             </div>
