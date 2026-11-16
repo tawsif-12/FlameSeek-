@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -51,9 +52,10 @@ async def _keep_world_hotspots_fresh(every_seconds: float = 12 * 60) -> None:
 async def lifespan(_: FastAPI):
     tasks = [
         asyncio.create_task(_warm_current_hotspots()),
-        asyncio.create_task(_warm_event_set()),
         asyncio.create_task(_keep_world_hotspots_fresh()),
     ]
+    if os.getenv('FLAMESEEK_WARM_EVENTS', 'true').lower() == 'true':
+        tasks.append(asyncio.create_task(_warm_event_set()))
     yield
     for task in tasks:
         task.cancel()

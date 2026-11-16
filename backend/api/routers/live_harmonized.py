@@ -28,6 +28,7 @@ _harmonization_errors = {}
 _full_lock = asyncio.Lock()
 FRESH_SECONDS = 15 * 60
 MAX_CACHE_SECONDS = 6 * 60 * 60
+LIVE_MERGING_ENABLED = os.getenv('FLAMESEEK_LIVE_MERGING_ENABLED', 'true').lower() == 'true'
 
 
 def _save_snapshot(days, stamp, payload):
@@ -103,6 +104,8 @@ async def _finish_harmonization(key):
 
 
 def _start_harmonization(key):
+    if not LIVE_MERGING_ENABLED:
+        return
     job=_harmonization_jobs.get(key)
     changed=False
     if job is not None and job.done() and key not in _harmonization_errors:
@@ -154,10 +157,20 @@ async def _refresh(days):
             'raw_hotspots': rows,
             'metadata': {'raw_hotspot_count': len(rows), 'data_source': source_status,
                          'unavailable_live_sensors': missing_sensors, 'partial_coverage': bool(missing_sensors),
-                         'snapshot_at': observed_at, 'processing_pending': True},
+                         'snapshot_at': observed_at, 'processing_pending': LIVE_MERGING_ENABLED,
+                         'harmonization_unavailable': not LIVE_MERGING_ENABLED,
+                         'live_processing_mode': 'footprint_events' if LIVE_MERGING_ENABLED else 'satellite_observations'},
         })
         _snapshots[days] = (time.time(), payload)
         _ready[days].set()
+        if not LIVE_MERGING_ENABLED:
+            try:
+                await asyncio.to_thread(_save_snapshot, days, time.time(), payload)
+            except OSError:
+                pass
+            _errors.pop(days, None)
+            _retry_after.pop(days, None)
+            return
         async with _lock:
             result = await asyncio.to_thread(compute, rows)
         payload = {**payload, 'hotspots': sorted(result['hotspots'], key=lambda p: p.get('frp') or 0, reverse=True),
@@ -245,7 +258,7 @@ async def harmonized_hotspots(days: int = Query(1, ge=1, le=5), limit: int | Non
     stamp, payload = cached
     key = payload['metadata'].get('harmonization_run')
     if key: _start_harmonization(key)
-    elif payload.get('raw_hotspots') and (payload['metadata'].get('processing_pending') or payload['metadata'].get('harmonization_unavailable')) and time.time()>=_retry_after.get(days,0) and (days not in _jobs or _jobs[days].done()):
+    elif LIVE_MERGING_ENABLED and payload.get('raw_hotspots') and (payload['metadata'].get('processing_pending') or payload['metadata'].get('harmonization_unavailable')) and time.time()>=_retry_after.get(days,0) and (days not in _jobs or _jobs[days].done()):
         _jobs[days]=asyncio.create_task(_upgrade_snapshot(days,stamp,payload))
     # Legacy snapshots may contain a raw preview in hotspots. Never publish it
     # as merged output, including after a failed or incomplete pipeline run.

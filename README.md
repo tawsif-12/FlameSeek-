@@ -1,5 +1,14 @@
 # FlameSeek deployment
 
+The Docker deployment defaults to individual NASA satellite observations on the
+live map, without automatic worldwide footprint matching or event precomputation
+at startup. These points are observations, not confirmed or merged fire events.
+Prediction and on-demand analysis code remains available. To enable the heavier
+live merging workflow on a host with sufficient resources, set
+`FLAMESEEK_LIVE_MERGING_ENABLED=true`. Optional startup event precomputation uses
+`FLAMESEEK_WARM_EVENTS=true`. Neither setting installs the historical database;
+that still requires a separate data transfer.
+
 Three application folders:
 
 - frontend/: React/Cesium source, assets, Dockerfile and API proxy.
