@@ -3,6 +3,14 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
+    { "source": "/health", "destination": "https://flameseek.onrender.com/health" },
+    { "source": "/api/:path*", "destination": "https://flameseek.onrender.com/api/:path*" },
+    { "source": "/meta", "destination": "https://flameseek.onrender.com/meta" },
+    { "source": "/fires", "destination": "https://flameseek.onrender.com/fires" },
+    { "source": "/fires/:path*", "destination": "https://flameseek.onrender.com/fires/:path*" },
+    { "source": "/events/:path*", "destination": "https://flameseek.onrender.com/events/:path*" },
+    { "source": "/detections", "destination": "https://flameseek.onrender.com/detections" },
+    { "source": "/grid/:path*", "destination": "https://flameseek.onrender.com/grid/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

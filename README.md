@@ -1,5 +1,15 @@
 # FlameSeek deployment
 
+Vercel production requests use relative API URLs. `frontend/vercel.json` forwards
+API and snapshot routes to `https://flameseek.onrender.com` before the SPA fallback.
+This keeps browser requests on the website's domain. `VITE_API_BASE_URL` is used
+only in development; update the rewrite destinations to change the production backend.
+Temporary live-map network/gateway errors are retried once. Permanent failures
+show their error in the sidebar instead of hiding it inside Data details.
+
+Historical snapshots currently remain local. An empty cloud catalog means history
+is unavailable there; the live NASA map does not need those SQLite files.
+
 The Docker deployment defaults to individual NASA satellite observations on the
 live map, without automatic worldwide footprint matching or event precomputation
 at startup. These points are observations, not confirmed or merged fire events.

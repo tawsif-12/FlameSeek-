@@ -1288,7 +1288,7 @@ export default function CesiumFireGlobe() {
               <p className="refresh-timestamp">Several detections may belong to one fire. Merged events are estimates, not confirmed wildfire counts.</p>
             </div>
           )}
-          {feedState === "failed" && <p className="refresh-timestamp">Data unavailable. Try Refresh FIRMS.</p>}
+          {feedState === "failed" && <p className="refresh-timestamp" role="alert">{dataStatus}</p>}
           {layers.Harmonized && mergedUnavailable && rawHotspots.length > 0 && <p className="refresh-timestamp">Showing individual satellite detections while merged fire events are unavailable.</p>}
           <HarmonizationProgress runId={harmonizationRun} />
           <details className="sidebar-data-details">

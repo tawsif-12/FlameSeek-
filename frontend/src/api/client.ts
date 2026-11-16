@@ -1,4 +1,5 @@
 import axios from "axios";
+import { API_BASE } from "./base";
 import type {
   PlacePipelineSummary,
   AOI,
@@ -15,7 +16,7 @@ import type {
 } from "../types/api";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "",
+  baseURL: API_BASE,
   timeout: 180000,
 });
 
@@ -24,7 +25,7 @@ export function normalizeApiError(error: unknown): string {
     const detail = error.response?.data?.detail;
     if (detail?.message) return detail.message;
     if (typeof detail === "string") return detail;
-    return error.message;
+    return error.response ? `HTTP ${error.response.status}: ${error.message}` : error.message;
   }
   if (error instanceof Error) return error.message;
   return "Unexpected error";
@@ -37,9 +38,23 @@ export function getHarmonizedHotspots(days = 1, bbox?: [number, number, number, 
   const key = JSON.stringify([days, bbox]);
   const pending = globeRequests.get(key);
   if (pending) return pending;
-  const request = api.get<CurrentHotspotsResponse>('/api/harmonized_hotspots', {
-    params: { days, ...(bbox ? { bbox: bbox.join(',') } : {}) }, timeout: 120000,
-  }).then(({ data }) => data).finally(() => globeRequests.delete(key));
+  const request = (async () => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const { data } = await api.get<CurrentHotspotsResponse>('/api/harmonized_hotspots', {
+          params: { days, ...(bbox ? { bbox: bbox.join(',') } : {}) }, timeout: 120000,
+        });
+        if (!data || !Array.isArray(data.hotspots) || !data.metadata || typeof data.metadata !== 'object') {
+          throw new Error('The API returned an invalid response. Check that the Vercel API proxy is deployed.');
+        }
+        return data;
+      } catch (error) {
+        const transient = axios.isAxiosError(error) && (!error.response || [502, 503, 504].includes(error.response.status));
+        if (attempt >= 1 || !transient) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+    }
+  })().finally(() => globeRequests.delete(key));
   globeRequests.set(key, request);
   return request;
 }

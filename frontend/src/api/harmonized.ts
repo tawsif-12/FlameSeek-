@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { API_BASE } from "./base";
 
 /* Harmonized-record data: offline snapshot API (/meta, /fires/active, /events, /detections)
    and site-data/site.json exported by tools/export_site_data.py. Every exported number carries
@@ -90,7 +91,7 @@ export function computed<T>(v: T | Awaiting): T | null {
   return v && typeof v === "object" && (v as Awaiting).status === "awaiting data" && Object.keys(v as object).length === 1 ? null : (v as T);
 }
 
-const BASE = import.meta.env.VITE_API_BASE_URL || "";
+const BASE = API_BASE;
 
 export async function snapshotGet<T>(path: string, params: Record<string, string | number | boolean | undefined> = {}, payload?: unknown, signal?: AbortSignal): Promise<T> {
   const q = new URLSearchParams();
