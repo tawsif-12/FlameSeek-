@@ -1,0 +1,96 @@
+from __future__ import annotations
+
+import asyncio
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from search_http import SearchGZipMiddleware
+
+from config import APP_NAME, APP_VERSION, FRONTEND_ORIGINS
+from routers.analysis import router as analysis_router
+from routers.live_harmonized import router as live_harmonized_router
+from routers.fire_events import list_events
+from routers.fire_events import router as events_router
+from routers.memory import router as memory_router
+from routers.places import router as places_router
+from routers.place_pipeline import router as place_pipeline_router
+from routers.sources import router as sources_router
+from routers.pipeline_status import router as pipeline_status_router
+from routers.datasets import router as datasets_router
+
+
+async def _warm_event_set() -> None:
+    """Reconstruct the recent world event set once at startup so the globe's first load is fast."""
+    try:
+        await list_events(bbox=None, days=2, limit=1, min_detections=1)
+        print("event set warmed")
+    except Exception as exc:  # noqa: BLE001 - warm-up is best effort
+        print(f"event warm-up skipped: {exc}")
+
+
+async def _warm_current_hotspots() -> None:
+    """Prime the FIRMS CSV cache for the default globe request so the first UI load is instant."""
+    from routers.live_harmonized import warm_harmonized
+    try:
+        await warm_harmonized(1)
+        print("current hotspots warmed")
+    except Exception as exc:  # noqa: BLE001 - warm-up is best effort
+        print(f"current hotspots warm-up skipped: {exc}")
+
+
+async def _keep_world_hotspots_fresh(every_seconds: float = 12 * 60) -> None:
+    """Refresh the worldwide 24-hour download before its 15-minute cache expires, so any searched
+    place's live hotspots are cut from it instantly instead of waiting on a new NASA request."""
+    while True:
+        await asyncio.sleep(every_seconds)
+        await _warm_current_hotspots()
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    tasks = [
+        asyncio.create_task(_warm_current_hotspots()),
+        asyncio.create_task(_warm_event_set()),
+        asyncio.create_task(_keep_world_hotspots_fresh()),
+    ]
+    yield
+    for task in tasks:
+        task.cancel()
+
+
+app = FastAPI(title="FlameSeek API", version=APP_VERSION, lifespan=lifespan)
+app.add_middleware(SearchGZipMiddleware)
+app.include_router(live_harmonized_router, prefix='/api')
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=FRONTEND_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(analysis_router, prefix="/api", tags=["analysis"])
+app.include_router(memory_router, prefix="/api", tags=["fire memory"])
+app.include_router(events_router, prefix="/api", tags=["fire events"])
+app.include_router(places_router, prefix="/api", tags=["places and jobs"])
+app.include_router(place_pipeline_router, prefix="/api", tags=["fire intelligence pipeline"])
+app.include_router(sources_router, tags=["sources"])
+app.include_router(pipeline_status_router, prefix="/api", tags=["pipeline"])
+app.include_router(datasets_router, prefix="/api", tags=["datasets"])
+
+
+@app.get("/")
+async def root() -> dict[str, str]:
+    return {"service": APP_NAME, "message": "FlameSeek API", "version": APP_VERSION}
+
+
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok", "service": APP_NAME}
+
+
+# Offline harmonization snapshot routes.
+from routers.snapshot import router as snapshot_router
+app.include_router(snapshot_router, tags=['harmonization snapshots'])

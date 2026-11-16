@@ -1,0 +1,20 @@
+name: flameseek
+services:
+  backend:
+    build: ./backend
+    env_file: ./backend/.env
+    restart: unless-stopped
+    init: true
+    expose: ["8000"]
+    volumes:
+      - ./database/data:/app/backend/data
+      - ./database/dataset:/app/backend/dataset:ro
+      - ./database/outputs:/app/backend/outputs
+      - ./database/cache:/app/backend/api/cache
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports: ["8080:80"]
+    depends_on:
+      backend:
+        condition: service_healthy
