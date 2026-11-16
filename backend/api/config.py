@@ -23,7 +23,10 @@ FRONTEND_ORIGINS = [
     "http://127.0.0.1:5174",
     "http://127.0.0.1:5175",
     "http://127.0.0.1:3000",
+    "https://frontend-henna-two-87.vercel.app",
 ]
+FRONTEND_ORIGINS += [origin.strip().rstrip('/') for origin in
+                     os.getenv('FRONTEND_ORIGINS', '').split(',') if origin.strip()]
 
 BACKEND_DIR = Path(__file__).resolve().parent
 CACHE_DIR = Path(os.getenv("BURNING_ACTIVITY_CACHE_DIR", BACKEND_DIR / "cache"))
