@@ -280,18 +280,11 @@ body { margin: 0; }
 /* Mobile destination bar: the current destination expands into a labelled pill. */
 @media (max-width: 1000px) {
   :root { --mobile-nav-space: calc(84px + env(safe-area-inset-bottom)); }
-  #root { padding-bottom: var(--mobile-nav-space); }
+  html, body { height: auto; min-height: 100%; overflow-x: clip; overflow-y: visible; }
+  #root { height: auto; min-height: 100dvh; overflow: visible; padding-bottom: 0; }
+  #root > main:not(.immersive-globe-page) { padding-bottom: var(--mobile-nav-space); }
   #root .mission-header .mobile-menu-toggle,
   #root .mission-header nav.primary-navigation { display: none; }
-  #root .mission-header {
-    background: transparent;
-    border: 0;
-    box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    pointer-events: none;
-  }
-  #root .mission-header :is(.brand-mark, .header-actions) { pointer-events: auto; }
   #root .mobile-expanding-nav {
     position: fixed;
     z-index: 1050;
