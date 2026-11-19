@@ -1,6 +1,8 @@
 FROM python:3.11-slim
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/app/backend/api:/app/backend FLAMESEEK_PIPELINE_PYTHON=/usr/local/bin/python
-ENV FLAMESEEK_LIVE_MERGING_ENABLED=false FLAMESEEK_WARM_EVENTS=false
+ENV FLAMESEEK_LIVE_MERGING_ENABLED=true FLAMESEEK_FULL_HARMONIZATION_ENABLED=false FLAMESEEK_WARM_EVENTS=false
+ENV OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
+ENV FLAMESEEK_GROUPING_WORKER=thread
 WORKDIR /app/backend
 RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt .

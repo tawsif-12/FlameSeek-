@@ -125,11 +125,13 @@ def urt_near_duplicates(df: pd.DataFrame, q: dict) -> pd.Series:
     """det_id of the NRT row each URT row duplicates (same platform, |Δt| <= urt_dup_max_dt_min,
     distance <= urt_dup_max_dist_m), else NaN. Ultra-real-time (URT) rows are early copies that
     FIRMS later re-issues as NRT, so the NRT row is kept."""
-    from sklearn.neighbors import BallTree
     out = pd.Series(np.nan, index=df.index)
     ver = df["version"].astype(str)
     ok = df["latitude"].notna() & df["longitude"].notna() & df["acq_datetime_utc"].notna()
     urt, nrt = df[ok & ver.str.contains("URT")], df[ok & ~ver.str.contains("URT")]
+    if urt.empty or nrt.empty:
+        return out
+    from sklearn.neighbors import BallTree
     r = q["urt_dup_max_dist_m"] / 6_371_008.8
     max_dt = pd.Timedelta(minutes=q["urt_dup_max_dt_min"])
     for plat, u in urt.groupby("platform"):

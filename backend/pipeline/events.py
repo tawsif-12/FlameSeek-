@@ -24,9 +24,8 @@ import pandas as pd
 import shapely
 from pyproj import Transformer
 from scipy.cluster.hierarchy import fcluster, linkage
-from scipy.spatial import ConvexHull
+from scipy.spatial import ConvexHull, cKDTree
 from scipy.spatial.distance import pdist
-from sklearn.neighbors import BallTree
 
 from pipeline.footprints import _TO_6933
 
@@ -94,10 +93,14 @@ def daily_links(day: gpd.GeoDataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=["i", "j", "dist_km", "overlap", "within_halfdiag"])
     lat, lon = day["latitude"].to_numpy(), day["longitude"].to_numpy()
     hd = day["half_diag_km"].to_numpy()
-    tree = BallTree(np.radians(np.c_[lat, lon]), metric="haversine")
+    # Unit-sphere chord distances select the same angular neighbours without
+    # loading a second machine-learning stack into the live worker.
+    phi, lam = np.radians(lat), np.radians(lon)
+    xyz = np.c_[np.cos(phi) * np.cos(lam), np.cos(phi) * np.sin(lam), np.sin(phi)]
+    tree = cKDTree(xyz)
     # Candidate radius: the largest possible half-diagonal sum, plus 2% margin.
     r = 2 * hd.max() * 1.02 / EARTH_R_KM
-    neigh = tree.query_radius(np.radians(np.c_[lat, lon]), r=r)
+    neigh = tree.query_ball_point(xyz, r=2 * np.sin(min(r, np.pi) / 2))
     i = np.repeat(np.arange(len(day)), [len(n) for n in neigh])
     j = np.concatenate(neigh)
     keep = i < j

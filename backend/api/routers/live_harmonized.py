@@ -5,6 +5,7 @@ import json
 import math
 import os
 import subprocess
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,6 +30,7 @@ _full_lock = asyncio.Lock()
 FRESH_SECONDS = 15 * 60
 MAX_CACHE_SECONDS = 6 * 60 * 60
 LIVE_MERGING_ENABLED = os.getenv('FLAMESEEK_LIVE_MERGING_ENABLED', 'true').lower() == 'true'
+FULL_HARMONIZATION_ENABLED = os.getenv('FLAMESEEK_FULL_HARMONIZATION_ENABLED', 'false').lower() == 'true'
 
 
 def _save_snapshot(days, stamp, payload):
@@ -37,19 +39,33 @@ def _save_snapshot(days, stamp, payload):
 
 def compute(rows):
     encoded = json.dumps(jsonable_encoder(rows), sort_keys=True)
-    key = hashlib.sha256(('live-v2-full-workflow' + encoded).encode()).hexdigest()[:24]
+    key = hashlib.sha256(('live-v3-grouping' + str(FULL_HARMONIZATION_ENABLED) + encoded).encode()).hexdigest()[:24]
     folder = ROOT / '.runlogs' / 'live_harmonized'
     folder.mkdir(parents=True, exist_ok=True)
     source, target = folder / f'{key}.input.json', folder / f'{key}.json'
     if not target.exists():
-        source.write_text(encoded, encoding='utf-8')
-        proc = subprocess.run([os.getenv('FLAMESEEK_PIPELINE_PYTHON', r'E:\anaconda\envs\flameseek\python.exe'),
-                               '-m', 'pipeline.live_globe', str(source), str(target), str(folder/key)],
-                              cwd=ROOT, capture_output=True, text=True, timeout=300)
-        if proc.returncode:
-            raise RuntimeError(proc.stderr[-2000:])
+        if os.getenv('FLAMESEEK_GROUPING_WORKER', 'subprocess') == 'thread':
+            # compute() already runs in asyncio.to_thread under the single-job
+            # lock. Reuse imported libraries instead of duplicating the API's
+            # Python/geospatial runtime in a second process on small instances.
+            from pipeline.live_globe import harmonize
+            result = harmonize(json.loads(encoded), folder/key if FULL_HARMONIZATION_ENABLED else None)
+            temporary = target.with_suffix('.tmp')
+            temporary.write_text(json.dumps(result, allow_nan=False), encoding='utf-8')
+            temporary.replace(target)
+        else:
+            source.write_text(encoded, encoding='utf-8')
+            command = [os.getenv('FLAMESEEK_PIPELINE_PYTHON', sys.executable),
+                       '-m', 'pipeline.live_globe', str(source), str(target)]
+            if FULL_HARMONIZATION_ENABLED:
+                command.append(str(folder/key))
+            proc = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, timeout=300)
+            if proc.returncode:
+                raise RuntimeError(proc.stderr[-2000:])
     payload = json.loads(target.read_text(encoding='utf-8'))
-    payload['metadata']['harmonization_run'] = key
+    payload['metadata']['grouping_run'] = key
+    if FULL_HARMONIZATION_ENABLED:
+        payload['metadata']['harmonization_run'] = key
     return payload
 
 
@@ -67,7 +83,7 @@ def _full_workflow(key):
         previous=json.loads(status.read_text())
         if previous.get('finished') and previous.get('input_signature')==signature: return
     if not (folder/'detections.parquet').exists(): return
-    command = [os.getenv('FLAMESEEK_PIPELINE_PYTHON', r'E:\anaconda\envs\flameseek\python.exe'),
+    command = [os.getenv('FLAMESEEK_PIPELINE_PYTHON', sys.executable),
                '-m','pipeline.harmonization',str(folder),str(folder/'full')]
     evidence = ROOT/'config'/'harmonization_evidence.json'
     if evidence.exists(): command += ['--evidence',str(evidence)]
@@ -104,7 +120,7 @@ async def _finish_harmonization(key):
 
 
 def _start_harmonization(key):
-    if not LIVE_MERGING_ENABLED:
+    if not LIVE_MERGING_ENABLED or not FULL_HARMONIZATION_ENABLED:
         return
     job=_harmonization_jobs.get(key)
     changed=False
@@ -135,7 +151,7 @@ async def _upgrade_snapshot(days, stamp, payload):
             result=await asyncio.to_thread(compute,rows)
         current=_snapshots.get(days)
         if current is None or current[0]!=stamp: return
-        updated={**payload,'hotspots':result['hotspots'],'metadata':{**payload['metadata'],**result['metadata'], 'processing_pending':False}}
+        updated={**payload,'hotspots':result['hotspots'],'metadata':{**payload['metadata'],**result['metadata'], 'processing_pending':False, 'harmonization_unavailable':False, 'live_processing_mode':'footprint_events'}}
         _snapshots[days]=(stamp,updated)
         key=result['metadata'].get('harmonization_run')
         if key: _start_harmonization(key)
@@ -174,7 +190,7 @@ async def _refresh(days):
         async with _lock:
             result = await asyncio.to_thread(compute, rows)
         payload = {**payload, 'hotspots': sorted(result['hotspots'], key=lambda p: p.get('frp') or 0, reverse=True),
-                   'metadata': {**payload['metadata'], **result['metadata'], 'processing_pending': False}}
+                   'metadata': {**payload['metadata'], **result['metadata'], 'processing_pending': False, 'harmonization_unavailable': False, 'live_processing_mode': 'footprint_events'}}
         stamp = time.time()
         _snapshots[days] = (stamp, payload)
         key = result['metadata'].get('harmonization_run')

@@ -28,14 +28,18 @@ These changes recover from interruptions; they do not guarantee provider uptime.
 An always-on backend and persistent shared cache require suitable hosting/storage.
 No paid resources or historical database uploads are enabled by this change.
 
-The Docker deployment defaults to individual NASA satellite observations on the
-live map, without automatic worldwide footprint matching or event precomputation
-at startup. These points are observations, not confirmed or merged fire events.
-Prediction and on-demand analysis code remains available. To enable the heavier
-live merging workflow on a host with sufficient resources, set
-`FLAMESEEK_LIVE_MERGING_ENABLED=true`. Optional startup event precomputation uses
-`FLAMESEEK_WARM_EVENTS=true`. Neither setting installs the historical database;
-that still requires a separate data transfer.
+The Docker deployment enables live footprint-based event grouping (procedure Steps
+1-4). Real satellite observations are published immediately while a single grouping
+worker runs in a background thread, sharing the API runtime rather than starting
+a duplicate Python process; failures retain those observations. Numeric workers
+use one thread to limit memory use. Grouped points are estimates, not confirmed fires.
+
+The additional full harmonization workflow (grid/calibration/diurnal/Monte Carlo)
+is separately opt-in with `FLAMESEEK_FULL_HARMONIZATION_ENABLED=true`; it is not
+required for live event grouping. Startup event precomputation remains disabled.
+`FLAMESEEK_LIVE_MERGING_ENABLED=false` explicitly disables grouping if set in Render;
+remove that override or set it to `true` to use the Docker default. Historical
+snapshots still require a separate data transfer.
 
 Three application folders:
 

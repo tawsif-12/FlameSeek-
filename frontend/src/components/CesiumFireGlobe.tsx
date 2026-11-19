@@ -225,6 +225,7 @@ export default function CesiumFireGlobe() {
   const [mobilePanel, setMobilePanel] = useState<"filters" | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [layers, setLayers] = useState<Record<LayerKey, boolean>>(layerDefaults);
+  const layerSelectionTouched = useRef(false);
   const layersRef = useRef(layers);
   layersRef.current = layers;
   const [lighting] = useState<LightingMode>("Day");
@@ -435,6 +436,9 @@ export default function CesiumFireGlobe() {
       setHotspots(uniqueGlobePoints(response.hotspots));
       setRawHotspots(uniqueGlobePoints(historical ? response.hotspots : response.raw_hotspots ?? []));
       if (historical) setLayers((cur) => ({ ...cur, Harmonized: false, Terra: true, Aqua: true, "S-NPP": true, "NOAA-20": true, "NOAA-21": true }));
+      else if (!layerSelectionTouched.current && !response.metadata.processing_pending && !response.metadata.harmonization_unavailable) {
+        setLayers(cur => ({ ...cur, Harmonized: true, Terra: false, Aqua: false, "S-NPP": false, "NOAA-20": false, "NOAA-21": false }));
+      }
       const m = response.metadata as Record<string, number | string>;
       const missing = response.metadata.unavailable_live_sensors;
       const sourceLabel = response.metadata.partial_coverage
@@ -499,10 +503,10 @@ export default function CesiumFireGlobe() {
 
   useEffect(() => {
     if (period === "historical" || feedState === "loading") return;
-    const delay = backgroundRefresh || feedState === "failed" ? 30000 : 5 * 60000;
+    const delay = processingPending ? 10000 : backgroundRefresh || feedState === "failed" ? 30000 : 5 * 60000;
     const timer = window.setInterval(() => { void loadData(true); }, delay);
     return () => window.clearInterval(timer);
-  }, [backgroundRefresh, hotspots, feedState, dataStatus, period, historicalDate]);
+  }, [processingPending, backgroundRefresh, hotspots, feedState, dataStatus, period, historicalDate]);
 
   useEffect(() => {
     if (period === "historical") return;
@@ -1333,7 +1337,7 @@ export default function CesiumFireGlobe() {
           <div className="compact-layer-grid satellite-toggle-list">
             {satelliteLayers.map((platform) => {
               const count = satelliteCounts[platform];
-              return <button key={platform} className={layers[platform] ? "active" : ""} type="button" aria-pressed={layers[platform]} onClick={() => setLayers(cur => toggleObservationLayer(cur, platform, satelliteLayers))}>
+              return <button key={platform} className={layers[platform] ? "active" : ""} type="button" aria-pressed={layers[platform]} onClick={() => { layerSelectionTouched.current = true; setLayers(cur => toggleObservationLayer(cur, platform, satelliteLayers)); }}>
                 <span className="layer-check" aria-hidden="true">{layers[platform] ? "\u2713" : ""}</span>
                 <i className="sensor-dot" style={{ background: satelliteColors[platform] }} />
                 <span className="satellite-name">{LAYER_LABEL[platform]}</span><span className="layer-count">{count.toLocaleString()}</span>
@@ -1341,7 +1345,7 @@ export default function CesiumFireGlobe() {
             })}
           </div>
           <div className="compact-layer-grid">
-            <button className={layers.Harmonized ? "active" : ""} type="button" aria-pressed={layers.Harmonized} disabled={period === "historical" || mergedUnavailable || feedState === "loading"} title={observationsOnly ? "Event grouping is not enabled on this deployment. Individual satellite detections are available." : mergedUnavailable ? "Merged output is not ready. Raw detections are available through the satellite buttons." : "Footprint-merged events from procedure Steps 1-4; later harmonization stages are not computed here."} onClick={() => setLayers(cur => toggleObservationLayer(cur, "Harmonized", satelliteLayers))}>Merged map points · {hotspots.filter((h) => h.harmonized && (!filterToAoi || !aoi || aoiContains(aoi, h.lat, h.lon))).length.toLocaleString()}</button>
+            <button className={layers.Harmonized ? "active" : ""} type="button" aria-pressed={layers.Harmonized} disabled={period === "historical" || mergedUnavailable || feedState === "loading"} title={observationsOnly ? "Event grouping is not enabled on this deployment. Individual satellite detections are available." : mergedUnavailable ? "Merged output is not ready. Raw detections are available through the satellite buttons." : "Footprint-merged events from procedure Steps 1-4; later harmonization stages are not computed here."} onClick={() => { layerSelectionTouched.current = true; setLayers(cur => toggleObservationLayer(cur, "Harmonized", satelliteLayers)); }}>Merged map points · {hotspots.filter((h) => h.harmonized && (!filterToAoi || !aoi || aoiContains(aoi, h.lat, h.lon))).length.toLocaleString()}</button>
           </div>
           {mergedCount !== null && <p className="refresh-timestamp">Footprint-merged events (Steps 1-4). Sensor calibration, diurnal correction and activity uncertainty are not computed for this live layer.</p>}
           {mergedCount !== null && <p className="refresh-timestamp">{mergedSatelliteCounts.multiple.toLocaleString()} multi-satellite events · {mergedSatelliteCounts.single.toLocaleString()} single-satellite events in this area. Satellite buttons show raw detections; choose Merged map points for combined events.</p>}

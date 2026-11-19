@@ -38,7 +38,11 @@ def harmonize(rows, artifacts=None):
                     not_applied=q['not_applied'])
     if q['clean'].empty:
         return dict(hotspots=[], metadata=metadata)
-    result = events.run(footprints.run(q['clean'], cfg), cfg)
+    fp = footprints.run(q['clean'], cfg)
+    # These full-window tables are no longer needed during graph construction.
+    del raw, det, q
+    result = events.run(fp, cfg)
+    del fp
     points = []
     # Pick representatives in one grouped pass instead of constructing and
     # sorting a separate DataFrame for every event.
