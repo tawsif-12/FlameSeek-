@@ -369,12 +369,26 @@ body { margin: 0; }
   #root .mission-header .header-actions { align-items: center; }
   #root .mission-header .theme-toggle { min-width: 44px; min-height: 44px; }
   #root .oc-home { overflow: visible; padding-bottom: var(--mobile-nav-space); }
-  #root .oc-home .oc-hero { min-height: 0; overflow: visible; padding-top: var(--app-header-height); }
+  #root .oc-home .oc-hero { min-height: 0; overflow: visible; padding-top: calc(max(16px, env(safe-area-inset-top)) + 44px + 16px); }
+  #root .oc-home :is(.hero-floating-logo, .hero-floating-theme) {
+    position: absolute;
+    top: max(16px, env(safe-area-inset-top));
+    z-index: 10;
+    width: 44px;
+    height: 44px;
+  }
+  #root .oc-home .hero-floating-logo { left: max(16px, env(safe-area-inset-left)); }
+  #root .oc-home .hero-floating-theme { right: max(16px, env(safe-area-inset-right)); }
+  #root .hero-floating-logo .brand-mark { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; min-width: 0; }
+  #root .hero-floating-logo .brand-mark > div { display: none; }
+  #root .hero-floating-logo .brand-logo { width: 42px; height: 42px; padding: 3px; object-fit: contain; background: #fff; border: 1px solid rgba(148,163,184,.3); border-radius: 10px; }
+  #root .hero-floating-theme .theme-toggle { width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 50%; }
+  #root .hero-floating-theme .theme-toggle span { display: none; }
   #root .oc-home .oc-hero-main {
     grid-template-columns: minmax(0, 1fr);
     align-items: start;
     min-height: 0;
-    padding: 20px clamp(16px, 4vw, 20px) 24px;
+    padding: 0 clamp(16px, 4vw, 20px) 24px;
     gap: 24px;
   }
   #root .oc-home .oc-hero-content {

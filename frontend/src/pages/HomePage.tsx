@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import SensorShareChart from "../components/SensorShareChart";
+import BrandMark from "../components/BrandMark";
+import ThemeToggle from "../components/ThemeToggle";
+import { useMobileLayout } from "../lib/useMobileLayout";
 import {
   Satellite,
   Radio,
@@ -57,6 +60,7 @@ function formatAge(date: string) {
 }
 
 export default function HomePage() {
+  const mobileLayout = useMobileLayout();
   const [hotspots, setHotspots] = useState<HotspotRecord[]>([]);
   const [counts, setCounts] = useState<SensorCounts>(EMPTY_COUNTS);
   const [totalDetections, setTotalDetections] = useState<number | null>(null);
@@ -138,6 +142,10 @@ export default function HomePage() {
           HERO SECTION: 3D EARTH GLOBE, SATELLITE, HUD WIDGETS
           ==================================================================== */}
       <section className="oc-hero" aria-labelledby="oc-hero-heading">
+        {mobileLayout && <>
+          <div className="hero-floating-logo"><BrandMark /></div>
+          <div className="hero-floating-theme"><ThemeToggle /></div>
+        </>}
         <div className="oc-hero-main">
           {/* Left Column: Hero Copy & Actions */}
           <div className="oc-hero-content">

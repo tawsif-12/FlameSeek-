@@ -1,10 +1,12 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { Link, NavLink, Navigate, Route, BrowserRouter as Router, Routes, useLocation } from "react-router-dom";
+import { NavLink, Navigate, Route, BrowserRouter as Router, Routes, useLocation } from "react-router-dom";
 import "./styles.css";
 import { AppProvider } from "./context/AppContext";
 import { LanguageProvider } from "./context/LanguageContext";
 import ThemeToggle from "./components/ThemeToggle";
+import BrandMark from "./components/BrandMark";
+import { useMobileLayout } from "./lib/useMobileLayout";
 import { House, Flame, Search, Database, BookOpen } from "lucide-react";
 import RouteLoadingFallback from "./components/RouteLoadingFallback";
 import "./theme.css";
@@ -58,6 +60,7 @@ function Header() {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const headerRef = React.useRef<HTMLElement>(null);
   const location = useLocation();
+  const floatingHomeControls = useMobileLayout() && location.pathname === "/";
   React.useEffect(() => {
     setMenuOpen(false);
   }, [location]);
@@ -90,14 +93,8 @@ function Header() {
   }, []);
   return (
     <>
-    <header ref={headerRef} className="app-header mission-header" onKeyDown={(event) => { if (event.key === "Escape") setMenuOpen(false); }}>
-      <Link to="/" className="brand-mark" style={{ textDecoration: "none" }}>
-        <img className="brand-logo" src="/branding/flameseek-logo.png?v=3" width="52" height="52" alt="" />
-        <div>
-          <h1>FlameSeek</h1>
-          <p className="eyebrow">Global Fire Intelligence</p>
-        </div>
-      </Link>
+    {!floatingHomeControls && <header ref={headerRef} className="app-header mission-header" onKeyDown={(event) => { if (event.key === "Escape") setMenuOpen(false); }}>
+      <BrandMark />
       <button type="button" className="mobile-menu-toggle" aria-expanded={menuOpen} aria-controls="primary-navigation" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? "Close" : "Menu"}</button>
       <nav id="primary-navigation" className={`primary-navigation ${menuOpen ? "mobile-open" : ""}`} aria-label="Primary navigation" onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMenuOpen(false); }}>
         {PRIMARY_NAVIGATION.map((item) => (
@@ -110,7 +107,7 @@ function Header() {
       <div className="header-actions">
         <ThemeToggle />
       </div>
-    </header>
+    </header>}
     <nav className="mobile-expanding-nav" aria-label="Mobile navigation">
       {PRIMARY_NAVIGATION.map(({ icon: Icon, ...item }) => (
         <NavLink key={item.to} to={item.to} end={"end" in item ? item.end : undefined}

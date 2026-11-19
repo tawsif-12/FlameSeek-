@@ -1,6 +1,6 @@
 :root { color-scheme: dark; }
 
-.mission-header .theme-toggle {
+.mission-header .theme-toggle, .hero-floating-theme .theme-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -144,7 +144,7 @@ html[data-theme="day"] .mission-header {
 }
 html[data-theme="day"] .mission-header :is(.eyebrow, nav a) { color: #365e7c; }
 html[data-theme="day"] .mission-header nav a.active { color: #0369a1; background: #e0f2fe; }
-html[data-theme="day"] .mission-header .theme-toggle { background: #e0f2fe; color: #075985; border-color: #99cfee; }
+html[data-theme="day"] :is(.mission-header, .hero-floating-theme) .theme-toggle { background: #e0f2fe; color: #075985; border-color: #99cfee; }
 html[data-theme="day"] .mission-header .header-language { background: #f5fbff; color: #365e7c; border-color: #b4d6ec; }
 html[data-theme="day"] .header-more summary { color: #365e7c; }
 html[data-theme="day"] .header-more[open] summary, html[data-theme="day"] .header-more:has(a.active) summary { color: #0369a1; background: #e0f2fe; border-color: #99cfee; }
