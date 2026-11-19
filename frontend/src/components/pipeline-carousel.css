@@ -122,3 +122,93 @@
   .pipe-transition-wrapper .pipe-hud-scanline,
   .pipe-transition-wrapper .pipe-pill-pulse { animation: none; }
 }
+
+
+/* Natural-height mobile cards: only the selected card participates in layout.
+   Keep transformed neighbouring cards in the illustration stage, not page flow. */
+@media (max-width: 1023px) {
+  #root .oc-home #pipeline { padding-inline: clamp(16px, 4vw, 20px); }
+  #root .oc-home .pipe-transition-wrapper {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    align-items: start;
+    justify-items: center;
+    gap: 12px;
+    min-width: 0;
+    min-height: 0;
+    height: auto;
+    padding: 8px 0 12px;
+    overflow: visible;
+    perspective: none;
+    scroll-margin-block: 16px var(--mobile-nav-space);
+  }
+  #root .oc-home .pipe-transition-wrapper .pipe-sequencer-bar {
+    grid-area: 1 / 1;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(44px, 1fr));
+    grid-template-rows: auto auto;
+    align-items: center;
+    justify-items: center;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 6px;
+    gap: 4px 2px;
+    border-radius: 16px;
+  }
+  #root .oc-home .pipe-transition-wrapper .pipe-seq-step {
+    grid-row: 2;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 5px;
+    justify-content: center;
+  }
+  #root .oc-home .pipe-transition-wrapper .pipe-seq-step.active { grid-row: 1; grid-column: 1 / -1; padding-inline: 12px; }
+  #root .oc-home .pipe-transition-wrapper .pipe-seq-step:not(.active) .pipe-seq-label,
+  #root .oc-home .pipe-transition-wrapper .pipe-seq-arrow { display: none; }
+  #root .oc-home .pipe-transition-wrapper .pipe-seq-step.active .pipe-seq-label { display: inline; white-space: normal; }
+  #root .oc-home .pipe-transition-wrapper .pipe-seq-step:not(.active) .pipe-seq-dot {
+    background: var(--oc-bg-surface);
+    border-color: var(--oc-border-subtle);
+  }
+  #root .oc-home .pipe-transition-wrapper .pipe-seq-step:not(.active) .pipe-seq-num { color: var(--oc-text-secondary); }
+  #root .oc-home .pipe-transition-wrapper .pipe-stage-container {
+    grid-area: 2 / 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    justify-items: center;
+    height: auto;
+    min-height: 0;
+    overflow: clip;
+    overflow-clip-margin: 16px;
+  }
+  #root .oc-home .pipe-transition-wrapper .pipe-3d-card {
+    grid-area: 1 / 1;
+    align-self: start;
+    width: min(100%, 380px);
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+    scroll-margin-block: 16px calc(var(--mobile-nav-space) + 12px);
+  }
+  #root .oc-home .pipe-transition-wrapper .pipe-3d-card.active-center { position: relative; }
+  #root .oc-home .pipe-transition-wrapper .pipe-card-top { flex-wrap: wrap; gap: 6px; padding: 10px 12px; }
+  #root .oc-home .pipe-transition-wrapper .pipe-card-category-badge { white-space: normal; }
+  #root .oc-home .pipe-transition-wrapper .pipe-card-hud-viewport { flex: 0 0 96px; height: 96px; }
+  #root .oc-home .pipe-transition-wrapper .pipe-card-content { flex: none; gap: 10px; padding: 12px 14px; overflow: visible; }
+  #root .oc-home .pipe-transition-wrapper :is(.pipe-card-title, .pipe-card-question, .pipe-card-narrative) { margin: 0; }
+  #root .oc-home .pipe-transition-wrapper .pipe-card-narrative { flex: none; }
+  #root .oc-home .pipe-transition-wrapper .pipe-specs-grid { grid-template-columns: minmax(0, 1fr); gap: 6px; margin: 0; padding: 8px; }
+  #root .oc-home .pipe-transition-wrapper .pipe-spec-box { display: grid; grid-template-columns: minmax(0, 78px) minmax(0, 1fr); gap: 8px; align-items: start; min-width: 0; }
+  #root .oc-home .pipe-transition-wrapper :is(.pipe-spec-label, .pipe-spec-val) { min-width: 0; white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+  #root .oc-home .pipe-transition-wrapper .pipe-card-action-bar { margin-top: 0; padding-top: 2px; }
+  #root .oc-home .pipe-transition-wrapper .pipe-card-cta { min-height: 44px; }
+  #root .oc-home .pipe-transition-wrapper .pipe-nav-arrow { grid-area: 3 / 1; position: relative; top: auto; left: auto; right: auto; transform: none; width: 44px; height: 44px; margin: 0; }
+  #root .oc-home .pipe-transition-wrapper .pipe-arrow-prev { justify-self: start; }
+  #root .oc-home .pipe-transition-wrapper .pipe-arrow-next { justify-self: end; }
+  #root .oc-home .pipe-transition-wrapper .pipe-bottom-summary { grid-area: 3 / 1; width: calc(100% - 112px); min-width: 0; max-width: 100%; margin: 0; padding: 8px; flex-direction: column; gap: 4px; text-align: center; border-radius: 16px; }
+  #root .oc-home .pipe-transition-wrapper .pipe-summary-text { white-space: normal; overflow-wrap: anywhere; }
+}

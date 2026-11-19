@@ -426,6 +426,7 @@ export default function Pipeline3DTransition() {
               className={`pipe-seq-step ${isActive ? "active" : ""}`}
               onClick={() => selectIndex(idx)}
               aria-pressed={isActive}
+              aria-label={`Step ${stage.n}: ${stage.title}`}
               style={{
                 "--step-accent": stage.accentColor,
                 "--step-glow": stage.glowColor,

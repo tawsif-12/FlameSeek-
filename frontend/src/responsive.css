@@ -179,14 +179,6 @@ body { margin: 0; }
   #root .sat-coverflow-wrapper .sat-indicators-bar { flex-wrap: wrap; gap: 6px; padding-inline: 48px; }
   #root .sat-coverflow-wrapper .sat-indicator-pill { min-height: 44px; padding: 6px 8px; }
   #root .sat-coverflow-wrapper .sat-card-cta-btn { min-height: 44px; }
-  #root .pipe-transition-wrapper .pipe-stage-container { height: 650px; }
-  #root .pipe-transition-wrapper .pipe-3d-card { width: min(340px,calc(100cqw - 16px)); height: 620px; }
-  #root .pipe-transition-wrapper .pipe-card-content { gap: 10px; }
-  #root .pipe-transition-wrapper .pipe-card-category-badge { white-space: normal; }
-  #root .pipe-transition-wrapper .pipe-sequencer-bar { flex-wrap: wrap; justify-content: center; border-radius: 16px; }
-  #root .pipe-transition-wrapper .pipe-seq-step { min-height: 44px; min-width: 36px; }
-  #root .pipe-transition-wrapper .pipe-nav-arrow { width: 44px; height: 44px; }
-  #root .pipe-transition-wrapper .pipe-card-cta { min-height: 44px; }
   #root .roadmap-compact-heading { align-items: flex-start; }
   #root .roadmap-compact-detail nav button { width: 44px; height: 44px; }
   #root .minimal-search-stage { padding: 30px 14px; }
@@ -224,7 +216,6 @@ body { margin: 0; }
   #root .oc-event-right { margin-left: auto; }
   #root .roadmap-compact-steps { grid-template-columns: repeat(2,minmax(0,1fr)); }
   #root .intelligence-metrics { grid-template-columns: minmax(0,1fr); }
-  #root .pipe-transition-wrapper .pipe-spec-box { grid-template-columns: 70px minmax(0,1fr); }
 }
 @media (max-height: 500px) and (orientation: landscape) {
   #root .command-globe.fire-now :is(.scene-panel,.insight-drawer) { top: 54px; bottom: 62px; max-height: calc(100% - 116px); }
@@ -462,7 +453,7 @@ body { margin: 0; }
   #root .oc-home .oc-hero-visual { grid-column: 1; grid-row: 2; min-width: 0; max-width: 100%; overflow: clip; }
   /* Offscreen carousel cards belong to their own viewport, not the document.
      Restore containment overridden by the later-loaded homepage stylesheet. */
-  #root .oc-home :is(.sat-coverflow-wrapper, .pipe-transition-wrapper) { min-width: 0; max-width: 100%; overflow: clip; }
+  #root .oc-home .sat-coverflow-wrapper { min-width: 0; max-width: 100%; overflow: clip; }
   #root .oc-home :is(a, button, summary) { scroll-margin-bottom: var(--mobile-nav-space); }
 }
 @media (min-width: 431px) and (max-width: 767px) {
