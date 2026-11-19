@@ -1,5 +1,6 @@
 import axios from "axios";
 import { API_BASE } from "./base";
+import { saveObservations, savedObservations } from "./observationCache";
 import type {
   PlacePipelineSummary,
   AOI,
@@ -44,19 +45,26 @@ export function getHarmonizedHotspots(days = 1, bbox?: [number, number, number, 
     while (true) {
       try {
         const { data } = await api.get<CurrentHotspotsResponse>('/api/harmonized_hotspots', {
-          params: { days, ...(bbox ? { bbox: bbox.join(',') } : {}) }, timeout: 120000,
+          params: { days, ...(bbox ? { bbox: bbox.join(',') } : {}) }, timeout: Math.min(45000, Math.max(1, deadline - Date.now())),
         });
         if (!data || !Array.isArray(data.hotspots) || !data.metadata || typeof data.metadata !== 'object') {
           throw new Error('The API returned an invalid response. Check that the Vercel API proxy is deployed.');
         }
         if (data.metadata.observation_loading) {
+          const saved = await savedObservations(days, bbox);
+          if (saved) return saved;
           if (Date.now() >= deadline) throw new Error('NASA observations are still loading. Please try Refresh FIRMS shortly.');
           await new Promise((resolve) => setTimeout(resolve, 3000));
           continue;
         }
+        if (!bbox) void saveObservations(days, data);
         return data;
       } catch (error) {
-        const transient = axios.isAxiosError(error) && (!error.response || [502, 503, 504].includes(error.response.status));
+        const transient = axios.isAxiosError(error) && (!error.response || [408, 429, 500, 502, 503, 504].includes(error.response.status));
+        if (transient) {
+          const saved = await savedObservations(days, bbox);
+          if (saved) return saved;
+        }
         if (!transient || failures >= 3 || Date.now() >= deadline) throw error;
         failures++;
         await new Promise((resolve) => setTimeout(resolve, 2000 * failures));

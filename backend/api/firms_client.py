@@ -389,7 +389,10 @@ async def _fetch_recent_csv(client: httpx.AsyncClient, sensor: str, area: str, d
         return cached[1], source
 
     disk_key = f"{source}_{area.replace(',', '_')}_recent_{days}"
-    saved = disk_read("firms", disk_key, ".csv", max_age_seconds=FIRMS_RECENT_CACHE_TTL_SECONDS)
+    try:
+        saved = await asyncio.to_thread(disk_read, "firms", disk_key, ".csv", max_age_seconds=FIRMS_RECENT_CACHE_TTL_SECONDS)
+    except OSError:
+        saved = None
     if saved is not None:
         _CSV_CACHE[cache_key] = (time.time(), saved)
         return saved, source
@@ -399,8 +402,11 @@ async def _fetch_recent_csv(client: httpx.AsyncClient, sensor: str, area: str, d
     started = time.perf_counter()
     text = await _get_with_retries(client, url)
     print(f"firms_recent_request source={source} area={area} days={days} elapsed_ms={round((time.perf_counter() - started) * 1000, 1)}")
-    disk_write("firms", disk_key, text, ".csv")
     _CSV_CACHE[cache_key] = (time.time(), text)
+    try:
+        await asyncio.to_thread(disk_write, "firms", disk_key, text, ".csv")
+    except OSError:
+        pass  # Optional disk caching must not discard a successful NASA download.
     return text, source
 
 
@@ -594,7 +600,7 @@ async def fetch_recent_hotspots(
         async with semaphore:
             async with httpx.AsyncClient(timeout=60.0, headers={"User-Agent": HTTP_USER_AGENT}, verify=SSL_CONTEXT) as client:
                 text, source = await _fetch_recent_csv(client, sensor, area, days)
-            return _parse_csv(text, sensor, source)
+            return await asyncio.to_thread(_parse_csv, text, sensor, source)
 
     # Negative cache: after a recent FIRMS failure, skip live calls for a short window
     # so the UI returns from current cached observations instead of waiting on retries.

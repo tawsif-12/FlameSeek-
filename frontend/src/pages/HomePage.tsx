@@ -68,7 +68,11 @@ export default function HomePage() {
 
   useEffect(() => {
     let cancelled = false;
-    getHarmonizedHotspots(1).then((response) => {
+    let inFlight = false;
+    const refresh = () => {
+      if (inFlight || cancelled) return;
+      inFlight = true;
+      void getHarmonizedHotspots(1).then((response) => {
       if (cancelled) return;
       const observations = response.raw_hotspots ?? response.hotspots;
       const bySensor: SensorCounts = { ...EMPTY_COUNTS };
@@ -81,16 +85,25 @@ export default function HomePage() {
       const dataSource = String(response.metadata.data_source ?? "live");
       setSourceMode(dataSource.includes("cached") ? "cached" : "live");
       setUpdatedAt(new Date(String(response.metadata.snapshot_at ?? new Date().toISOString())));
-      setError(response.metadata.partial_coverage
+      setError(response.metadata.browser_cached ? String(response.metadata.message) : response.metadata.partial_coverage
         ? "Some NASA satellite feeds are unavailable. Totals include only the observations currently returned."
         : null);
     }).catch((error) => {
       if (cancelled) return;
       setSourceMode("unavailable");
-      setError(`Recent NASA observations unavailable: ${normalizeApiError(error)}. Try reloading the page.`);
-    }).finally(() => { if (!cancelled) setLoading(false); });
+      setHotspots([]);
+      setCounts(EMPTY_COUNTS);
+      setTotalDetections(null);
+      setError(`Recent NASA observations unavailable: ${normalizeApiError(error)}. Retrying automatically.`);
+    }).finally(() => { inFlight = false; if (!cancelled) setLoading(false); });
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 60000);
+    window.addEventListener("online", refresh);
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener("online", refresh);
     };
   }, []);
 

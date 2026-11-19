@@ -12,6 +12,22 @@ show their error in the sidebar instead of hiding it inside Data details.
 Historical snapshots currently remain local. An empty cloud catalog means history
 is unavailable there; the live NASA map does not need those SQLite files.
 
+## Outage recovery
+
+The map retries failed loads every 30 seconds, refreshes healthy data every five
+minutes, and retries immediately when the browser reconnects. The homepage
+refreshes every minute. Refresh failures retain eligible observations for the
+same area and time range. Successful worldwide observations are saved in browser
+Cache Storage (with an in-memory fallback if storage is disabled). During an
+outage these are explicitly labelled saved data, retain their original timestamp,
+expire after six hours, and exclude detections outside the requested time range.
+No sample data is used to hide an outage. First-time visitors without a saved
+snapshot must wait for a working backend and NASA response.
+
+These changes recover from interruptions; they do not guarantee provider uptime.
+An always-on backend and persistent shared cache require suitable hosting/storage.
+No paid resources or historical database uploads are enabled by this change.
+
 The Docker deployment defaults to individual NASA satellite observations on the
 live map, without automatic worldwide footprint matching or event precomputation
 at startup. These points are observations, not confirmed or merged fire events.

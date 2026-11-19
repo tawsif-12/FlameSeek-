@@ -269,6 +269,7 @@ export default function CesiumFireGlobe() {
   const [backgroundRefresh, setBackgroundRefresh] = useState(false);
   const [processingPending, setProcessingPending] = useState(false);
   const loadSequence = useRef(0);
+  const observationScope = useRef("");
   const [eventStatus, setEventStatus] = useState<string | null>(null);
   const [filterToAoi, setFilterToAoi] = useState(Boolean(lockedArea) || searchParams.get("aoi") === "1");
   const [drawing, setDrawing] = useState(false);
@@ -398,6 +399,10 @@ export default function CesiumFireGlobe() {
 
   async function loadData(quiet = false) {
     const sequence = ++loadSequence.current;
+    const scope = JSON.stringify([period, historicalDate, lockedArea ? aoi : null]);
+    const sameScope = observationScope.current === scope;
+    observationScope.current = scope;
+    if (!sameScope) { setHotspots([]); setRawHotspots([]); }
     if (!quiet) {
       setFeedState("loading");
       setMergedCount(null);
@@ -408,8 +413,7 @@ export default function CesiumFireGlobe() {
     const historical = period === "historical";
     const days = historical ? 1 : Number(period);
     if (!historical) {
-      if (!quiet) { setHotspots([]); setRawHotspots([]); }
-      setDataStatus("Harmonizing FIRMS detections: quality checks, pixel footprints and event merging...");
+      setDataStatus("Loading NASA observations. Existing points remain visible while refreshing...");
     } else {
       setDataStatus(`Loading what satellites saw on ${historicalDate}...`);
     }
@@ -435,7 +439,8 @@ export default function CesiumFireGlobe() {
         ? `Partial FIRMS coverage (live sources unavailable: ${Array.isArray(missing) ? missing.join(", ") : "unknown"}; cached observations may be included)`
         : m.data_source === "live" ? "LIVE FIRMS" : m.data_source === "cached_actual" ? "cached FIRMS fallback" : String(m.data_source ?? "FIRMS");
       setDataStatus(
-        response.metadata.processing_pending ? `${sourceLabel}: ${Number(m.raw_hotspot_count).toLocaleString()} real observations loaded. Matching events in the background.`
+        response.metadata.browser_cached ? String(response.metadata.message)
+          : response.metadata.processing_pending ? `${sourceLabel}: ${Number(m.raw_hotspot_count).toLocaleString()} real observations loaded. Matching events in the background.`
           : response.metadata.harmonization_unavailable ? `${sourceLabel}: event matching unavailable. Choose a satellite to view raw detections.`
           : historical ? `${sourceLabel} · On ${historicalDate}: ${Number(m.returned_hotspot_count).toLocaleString()} satellite detections.`
           : `${sourceLabel} · ${periodLabels[period]}: ${Number(m.raw_hotspot_count).toLocaleString()} detections → ${Number(m.events_total ?? 0).toLocaleString()} footprint-merged events; showing ${Number(m.returned_hotspot_count).toLocaleString()}. Procedure Steps 1–4. Calibrated activity and Monte Carlo uncertainty await data.`,
@@ -449,12 +454,24 @@ export default function CesiumFireGlobe() {
       if (sequence !== loadSequence.current || unmountedRef.current) return;
       setBackgroundRefresh(false);
       setProcessingPending(false);
-      if (quiet) { setDataStatus(`Refresh unavailable: ${normalizeApiError(error)}. Keeping loaded observations.`); return; }
+      const cutoff = Date.now() - days * 86400000;
+      const recent = (point: HotspotRecord) => Date.parse(point.acq_datetime) >= cutoff && Date.parse(point.acq_datetime) <= Date.now();
+      const savedRaw = rawHotspots.filter(recent);
+      const savedMerged = hotspots.filter(recent);
+      if (!historical && sameScope && lastRefresh && Date.now() - Date.parse(lastRefresh) <= 6 * 3600000 && (savedMerged.length > 0 || savedRaw.length > 0)) {
+        setHotspots(savedMerged);
+        setRawHotspots(savedRaw);
+        setRawObservationCount(savedRaw.length);
+        setFeedState("cached");
+        setBackgroundRefresh(true);
+        setDataStatus(`Live update unavailable: ${normalizeApiError(error)}. Keeping previously loaded observations and retrying automatically.`);
+        return;
+      }
       setFeedState("failed");
       setHotspots([]);
       setRawHotspots([]);
       setEvents([]);
-      setDataStatus(`FIRMS request failed: ${normalizeApiError(error)}. No fire points loaded.`);
+      setDataStatus(`FIRMS request failed: ${normalizeApiError(error)}. No fire points loaded. Retrying automatically.`);
       setEventStatus("Fire grouping paused because observations could not be loaded. Refresh to retry.");
       return;
     }
@@ -478,10 +495,18 @@ export default function CesiumFireGlobe() {
   }
 
   useEffect(() => {
-    if (!backgroundRefresh || period === "historical") return;
-    const timer = window.setTimeout(() => { void loadData(true); }, 10000);
-    return () => window.clearTimeout(timer);
-  }, [backgroundRefresh, hotspots, period, historicalDate]);
+    if (period === "historical" || feedState === "loading") return;
+    const delay = backgroundRefresh || feedState === "failed" ? 30000 : 5 * 60000;
+    const timer = window.setInterval(() => { void loadData(true); }, delay);
+    return () => window.clearInterval(timer);
+  }, [backgroundRefresh, hotspots, feedState, dataStatus, period, historicalDate]);
+
+  useEffect(() => {
+    if (period === "historical") return;
+    const recover = () => { void loadData(true); };
+    window.addEventListener("online", recover);
+    return () => window.removeEventListener("online", recover);
+  }, [period, historicalDate, lockedArea, aoi]);
 
   async function waitForContainerSize(element: HTMLDivElement) {
     for (let attempt = 0; attempt < 120; attempt += 1) {
@@ -1274,7 +1299,8 @@ export default function CesiumFireGlobe() {
           <h3 className="filter-section-title">Time range</h3>
           <p className="map-howto">Showing fire data from the last 24 hours.</p>
           <button className="option-card refresh-live-data" type="button" disabled={feedState === "loading"} onClick={() => void loadData()}><RefreshCw size={14} aria-hidden="true" className={feedState === "loading" ? "is-spinning" : ""} />Refresh FIRMS</button>
-          {lastRefresh && <p className="refresh-timestamp">Updated <time dateTime={lastRefresh}>{new Date(lastRefresh).toLocaleTimeString("en-GB", {timeZone: "UTC"})} UTC</time></p>}
+          {lastRefresh && <p className="refresh-timestamp">Updated <time dateTime={lastRefresh}>{new Date(lastRefresh).toLocaleString("en-GB", {timeZone: "UTC"})} UTC</time></p>}
+          {feedState === "cached" && <p className="refresh-timestamp" role="status">Showing saved observations. Live updates retry automatically.</p>}
         </section>
         <section className="harmonization-status" aria-live="polite" aria-busy={feedState === "loading"}>
           <p className={`processing-state ${feedState}`}>{feedState === "loading" ? "Loading..." : feedState === "failed" ? "Processing failed" : processingPending ? "Observations loaded. Matching events..." : mergedUnavailable ? "Merged output unavailable" : period === "historical" ? "Historical observations loaded" : "Ready"}</p>
