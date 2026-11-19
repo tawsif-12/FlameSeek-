@@ -8,8 +8,8 @@ main :is(.plot, .js-plotly-plot, .plot-container) { max-width: 100%; min-width: 
 main pre { max-width: 100%; overflow-x: auto; }
 :is(button, a, input, select, summary):focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; }
 
-@media (max-width: 1000px) {
-  :root { --app-header-height: 72px; }
+@media (max-width: 1023px) {
+  :root { --app-header-height: 64px; }
   .app-header.mission-header { position: fixed; height: var(--app-header-height); min-height: 0; padding: 10px 16px; display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 10px; }
   .mission-header .brand-mark { min-width: 0; margin-right: auto; flex: 1 1 auto; }
   .mission-header .brand-mark h1 { display: block; font-size: 19px; letter-spacing: .06em; }
@@ -22,13 +22,8 @@ main pre { max-width: 100%; overflow-x: auto; }
   .mission-header nav.primary-navigation a, .mission-header .header-more summary { min-height: 44px; width: 100%; font-size: 14px; letter-spacing: .04em; justify-content: flex-start; padding: 12px; white-space: normal; }
   .mission-header .header-more { width: 100%; }
   .mission-header .header-more > div { position: static; width: 100%; min-width: 0; max-height: none; box-shadow: none; margin-top: 4px; }
-  .oc-home .oc-hero { min-height: auto; }
-  .oc-home .oc-hero-main { grid-template-columns: minmax(0,1fr); min-height: auto; padding: 28px 20px; gap: 18px; }
-  .oc-home .oc-hero-content { grid-column: 1; grid-row: 1; align-self: auto; justify-content: flex-start; width: 100%; max-width: 680px; margin-inline: auto; }
-  .oc-home .oc-hero-title { font-size: clamp(32px,6.5vw,56px); margin-bottom: 18px; }
   .oc-home .oc-hero-visual { grid-column: 1; grid-row: 2; width: 100%; height: clamp(340px,72vw,580px); min-height: 0; }
   .oc-home .oc-hero-visual .outcrowd-3d-wrapper { height: 100% !important; }
-  .oc-home .oc-hero-stats { width: 100%; flex-wrap: wrap; gap: 20px; }
   .oc-home .oc-section { padding-inline: 20px; }
   .oc-home .oc-dashboard-grid { grid-template-columns: minmax(0,1fr); }
   .memory-page .memory-setup, .memory-page .memory-grid, main .hz-map-layout { grid-template-columns: minmax(0,1fr); }
@@ -60,13 +55,6 @@ main pre { max-width: 100%; overflow-x: auto; }
   main :is(.space-hero-strip, .nasa-page-intro) { padding-inline: 16px; }
   main :is(.nasa-page-intro h2, .space-hero-strip h2, .minimal-search-heading h2) { font-size: clamp(28px,8vw,38px); }
   main :is(.hero-chips, .intelligence-tabs, .analysis-navigation-links, .event-tabs) { flex-wrap: wrap; max-width: 100%; }
-  .oc-home .oc-hero-content { text-align: left; align-items: flex-start; }
-  .oc-home .oc-hero-subtitle { font-size: 15px; }
-  .oc-home .oc-hero-actions { width: 100%; gap: 12px; }
-  .oc-home .oc-hero-actions a { width: 100%; justify-content: center; min-height: 48px; }
-  .oc-home .oc-hero-stats { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; }
-  .oc-home .oc-stat-val { font-size: 28px; }
-  .oc-home .oc-stat-lbl { font-size: 11px; letter-spacing: .04em; }
   .oc-home .oc-hero-visual { height: clamp(320px,90vw,440px); }
   .oc-home .oc-section-title, .oc-home .oc-cta-title { font-size: clamp(26px,7vw,38px); }
   .oc-home .oc-cta-horizon { padding: 32px 18px; }
@@ -131,11 +119,11 @@ body { margin: 0; }
 #root .oc-hero-stats .oc-stat-item { min-width: 0; }
 #root .oc-hero-stats .oc-stat-val { overflow-wrap: anywhere; }
 
-@media (min-width: 1001px) and (max-width: 1280px) {
+@media (min-width: 1024px) and (max-width: 1280px) {
   #root .mission-header { gap: 14px; padding-inline: 20px; }
   #root .mission-header .primary-navigation { gap: 6px; }
   #root .mission-header .primary-navigation a { padding-inline: 8px; font-size: 12px; }
-  #root .oc-home .oc-hero-main { gap: 20px; padding-inline: 28px; }
+  #root .oc-home .oc-hero-main { padding-inline: 28px; gap: 20px; }
   #root .oc-home .oc-hero-title { font-size: clamp(38px,4.6vw,58px); }
 }
 @media (min-width: 641px) and (max-width: 1100px) {
@@ -144,10 +132,9 @@ body { margin: 0; }
   #root .location-content .fire-intelligence-dashboard .hz-side { max-height: none; }
   #root .location-content .bento-row { grid-template-columns: minmax(0,1fr); }
 }
-@media (max-width: 1000px) {
+@media (max-width: 1023px) {
   #root .mission-header { padding-left: max(12px,env(safe-area-inset-left)); padding-right: max(12px,env(safe-area-inset-right)); }
   #root .mission-header .primary-navigation.mobile-open { padding-bottom: max(20px,env(safe-area-inset-bottom)); overscroll-behavior: contain; }
-  #root .oc-home .oc-hero-main { grid-template-columns: minmax(0,1fr); }
   #root .oc-home .oc-hero-visual { min-width: 0; }
   #root .oc-home .oc-dashboard-grid { grid-template-columns: minmax(0,1fr); }
   #root .immersive-globe-page { height: 100svh; height: 100dvh; min-height: 0; }
@@ -178,7 +165,6 @@ body { margin: 0; }
   #root :is(.content-page,.memory-page,.hz-page) { padding-inline: 14px; }
   #root :is(.source-grid,.method-grid,.stats-grid,.hz-card-row,.hz-two,.hz-tiles,.memory-summary,.memory-stats,.dna-selector-grid,.dna-chart-row,.dna-analysis-row) { grid-template-columns: minmax(0,1fr); }
   #root .oc-home .oc-section { padding: 32px 14px; }
-  #root .oc-home .oc-hero-main { padding: 24px 16px; }
   #root .oc-home .oc-dashboard-panel { padding: 16px; border-radius: 16px; }
   #root .oc-home .oc-event-row { align-items: flex-start; padding: 12px; gap: 10px; }
   #root .oc-home .oc-event-left { min-width: 0; gap: 8px; }
@@ -270,7 +256,7 @@ body { margin: 0; }
   border: 1px solid rgba(148,163,184,.3);
   border-radius: 10px;
 }
-@media (max-width: 1000px) {
+@media (max-width: 1023px) {
   #root .mission-header .brand-logo { width: 42px; height: 42px; flex-basis: 42px; padding: 3px; }
 }
 @media (max-width: 360px) {
@@ -278,9 +264,11 @@ body { margin: 0; }
 }
 
 /* Mobile destination bar: the current destination expands into a labelled pill. */
-@media (max-width: 1000px) {
-  :root { --mobile-nav-space: calc(84px + env(safe-area-inset-bottom)); }
+@media (max-width: 1023px) {
+  :root { --mobile-nav-space: calc(64px + max(8px, env(safe-area-inset-bottom)) + 16px); }
   html, body { height: auto; min-height: 100%; overflow-x: clip; overflow-y: visible; }
+  html:has(.oc-home), body:has(.oc-home) { overflow: visible; }
+  html { scroll-padding-top: calc(var(--app-header-height) + 12px); scroll-padding-bottom: var(--mobile-nav-space); }
   #root { height: auto; min-height: 100dvh; overflow: visible; padding-bottom: 0; }
   #root > main:not(.immersive-globe-page) { padding-bottom: var(--mobile-nav-space); }
   #root .mission-header .mobile-menu-toggle,
@@ -365,4 +353,111 @@ body { margin: 0; }
 @media (prefers-reduced-motion: reduce) {
   #root .mobile-expanding-nav a,
   #root .mobile-expanding-nav a span { transition: none; }
+}
+
+/* Homepage text flows naturally; only the decorative 3D stages clip their artwork.
+   Scoped below desktop so lazy homepage CSS cannot restore desktop spacing. */
+@media (max-width: 1023px) {
+  #root .mission-header {
+    align-items: center;
+    gap: 12px;
+    padding-left: max(clamp(16px, 4vw, 20px), env(safe-area-inset-left));
+    padding-right: max(clamp(16px, 4vw, 20px), env(safe-area-inset-right));
+  }
+  #root .mission-header .brand-mark { min-height: 44px; display: flex; align-items: center; }
+  #root .mission-header .brand-logo { width: 42px; height: 42px; flex-basis: 42px; }
+  #root .mission-header .header-actions { align-items: center; }
+  #root .mission-header .theme-toggle { min-width: 44px; min-height: 44px; }
+  #root .oc-home { overflow: visible; padding-bottom: var(--mobile-nav-space); }
+  #root .oc-home .oc-hero { min-height: 0; overflow: visible; padding-top: var(--app-header-height); }
+  #root .oc-home .oc-hero-main {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    min-height: 0;
+    padding: 20px clamp(16px, 4vw, 20px) 24px;
+    gap: 24px;
+  }
+  #root .oc-home .oc-hero-content {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    align-self: start;
+    gap: 14px;
+    width: 100%;
+    max-width: 680px;
+    min-width: 0;
+    margin-inline: auto;
+    text-align: left;
+  }
+  #root .oc-home .oc-kicker-badge { align-self: flex-start; max-width: 100%; margin: 0; padding: 6px 10px; gap: 8px; }
+  #root .oc-home .oc-kicker-dot { flex-shrink: 0; }
+  #root .oc-home .oc-kicker-text { min-width: 0; font-size: 9px; line-height: 1.4; letter-spacing: .12em; overflow-wrap: anywhere; }
+  #root .oc-home .oc-hero-title {
+    margin: 0;
+    font-size: clamp(28px, 7.2vw, 36px);
+    line-height: 1.1;
+    letter-spacing: -.025em;
+    overflow-wrap: normal;
+    word-break: normal;
+    text-wrap: balance;
+  }
+  #root .oc-home .oc-hero-title .glow-gradient { max-width: 100%; }
+  #root .oc-home .oc-hero-subtitle { max-width: 60ch; margin: 0; font-size: 15px; line-height: 1.55; }
+  #root .oc-home .oc-hero-actions { display: grid; grid-template-columns: minmax(0, 1fr); width: 100%; margin: 2px 0 0; gap: 10px; }
+  #root .oc-home .oc-hero-actions a {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    height: auto;
+    justify-content: center;
+    align-items: center;
+    padding: 12px 16px;
+    gap: 10px;
+    font-size: clamp(12px, 3.2vw, 14px);
+    line-height: 1.35;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: normal;
+  }
+  #root .oc-home .oc-hero-actions svg { flex-shrink: 0; }
+  #root .oc-home .oc-hero-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    width: 100%;
+    margin: 2px 0 0;
+    padding-top: 16px;
+    gap: 18px 16px;
+  }
+  #root .oc-home .oc-stat-item { min-width: 0; gap: 6px; scroll-margin-block: calc(var(--app-header-height) + 12px) var(--mobile-nav-space); }
+  #root .oc-home .oc-stat-val {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 2px;
+    font-size: clamp(24px, 6.5vw, 30px);
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  #root .oc-home .oc-stat-val span { margin: 0; font-size: 12px; line-height: 1.2; }
+  #root .oc-home .oc-stat-lbl { min-width: 0; font-size: 10px; line-height: 1.45; letter-spacing: .035em; white-space: normal; overflow-wrap: normal; }
+  #root .oc-home .oc-hero-visual { grid-column: 1; grid-row: 2; min-width: 0; max-width: 100%; overflow: clip; }
+  /* Offscreen carousel cards belong to their own viewport, not the document.
+     Restore containment overridden by the later-loaded homepage stylesheet. */
+  #root .oc-home :is(.sat-coverflow-wrapper, .pipe-transition-wrapper) { min-width: 0; max-width: 100%; overflow: clip; }
+  #root .oc-home :is(a, button, summary) { scroll-margin-bottom: var(--mobile-nav-space); }
+}
+@media (min-width: 431px) and (max-width: 767px) {
+  #root .oc-home .oc-hero-title { font-size: clamp(30px, 5.4vw, 40px); }
+  #root .oc-home .oc-hero-content { gap: 16px; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  #root .oc-home .oc-hero-title { font-size: clamp(36px, 4.7vw, 46px); }
+  #root .oc-home .oc-hero-content { gap: 18px; }
+  #root .oc-home .oc-hero-subtitle { font-size: 16px; }
+  #root .oc-home .oc-hero-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 }
