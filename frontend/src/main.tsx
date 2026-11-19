@@ -5,16 +5,17 @@ import "./styles.css";
 import { AppProvider } from "./context/AppContext";
 import { LanguageProvider } from "./context/LanguageContext";
 import ThemeToggle from "./components/ThemeToggle";
+import { House, Flame, Search, Database, BookOpen } from "lucide-react";
 import RouteLoadingFallback from "./components/RouteLoadingFallback";
 import "./theme.css";
 import "./responsive.css";
 
 const PRIMARY_NAVIGATION = [
-  { to: "/", label: "Home", end: true },
-  { to: "/fire-map", label: "Fire Now" },
-  { to: "/search", label: "Search" },
-  { to: "/data-sources", label: "Data Sources" },
-  { to: "/methodology", label: "Methodology" },
+  { to: "/", label: "Home", icon: House, end: true },
+  { to: "/fire-map", label: "Fire Now", icon: Flame },
+  { to: "/search", label: "Search", icon: Search },
+  { to: "/data-sources", label: "Data Sources", icon: Database },
+  { to: "/methodology", label: "Methodology", icon: BookOpen },
 ] as const;
 
 // Keep every route out of the startup graph. The same stable loaders power
@@ -88,6 +89,7 @@ function Header() {
     return () => window.clearTimeout(id);
   }, []);
   return (
+    <>
     <header ref={headerRef} className="app-header mission-header" onKeyDown={(event) => { if (event.key === "Escape") setMenuOpen(false); }}>
       <Link to="/" className="brand-mark" style={{ textDecoration: "none" }}>
         <img className="brand-logo" src="/branding/flameseek-logo.png?v=3" width="52" height="52" alt="" />
@@ -109,6 +111,17 @@ function Header() {
         <ThemeToggle />
       </div>
     </header>
+    <nav className="mobile-expanding-nav" aria-label="Mobile navigation">
+      {PRIMARY_NAVIGATION.map(({ icon: Icon, ...item }) => (
+        <NavLink key={item.to} to={item.to} end={"end" in item ? item.end : undefined}
+          aria-label={item.label} title={item.label}
+          onFocus={() => prefetchRoute(item.to)} onTouchStart={() => prefetchRoute(item.to)}>
+          <Icon size={21} strokeWidth={1.8} aria-hidden="true" />
+          <span>{item.label}</span>
+        </NavLink>
+      ))}
+    </nav>
+    </>
   );
 }
 

@@ -1,4 +1,5 @@
 /* Shared responsive rules. Keep wide data scrollable within their own panels. */
+.mobile-expanding-nav { display: none; }
 .mobile-menu-toggle, .mobile-map-controls { display: none; }
 main, main section, main article, main aside, main form { min-width: 0; }
 main img, main video { max-width: 100%; }
@@ -274,4 +275,85 @@ body { margin: 0; }
 }
 @media (max-width: 360px) {
   #root .mission-header .brand-logo { width: 36px; height: 36px; flex-basis: 36px; }
+}
+
+/* Mobile destination bar: the current destination expands into a labelled pill. */
+@media (max-width: 1000px) {
+  :root { --mobile-nav-space: calc(84px + env(safe-area-inset-bottom)); }
+  #root { padding-bottom: var(--mobile-nav-space); }
+  #root .mission-header .mobile-menu-toggle,
+  #root .mission-header nav.primary-navigation { display: none; }
+  #root .mobile-expanding-nav {
+    position: fixed;
+    z-index: 1050;
+    left: 50%;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    width: min(460px, calc(100% - 16px));
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px;
+    min-height: 64px;
+    border: 1px solid var(--border, #244357);
+    border-radius: 26px;
+    background: var(--background, #081521);
+    box-shadow: 0 8px 32px #0004, inset 0 1px 0 #ffffff0d;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  #root .mobile-expanding-nav a {
+    flex: 1 1 0;
+    min-width: 44px;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    box-sizing: border-box;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 20px;
+    color: var(--foreground, #a3bbcf);
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: flex-grow 280ms ease, background-color 280ms ease, border-color 280ms ease, gap 280ms ease;
+  }
+  #root .mobile-expanding-nav a svg { flex: 0 0 21px; opacity: .65; }
+  #root .mobile-expanding-nav a span {
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    opacity: 0;
+    font: 600 11px/1.2 Inter, system-ui, sans-serif;
+    transition: max-width 280ms ease, opacity 200ms ease;
+  }
+  #root .mobile-expanding-nav a.active {
+    flex-grow: 2.8;
+    gap: 6px;
+    background: #38bdf826;
+    border-color: #38bdf85c;
+    box-shadow: inset 0 1px 0 #ffffff12;
+  }
+  #root .mobile-expanding-nav a.active svg { opacity: 1; }
+  #root .mobile-expanding-nav a.active span { max-width: 90px; opacity: 1; }
+  #root .mobile-expanding-nav a:focus-visible { outline-offset: 1px; }
+  #root .immersive-globe-page {
+    height: calc(100svh - var(--mobile-nav-space));
+    height: calc(100dvh - var(--mobile-nav-space));
+  }
+  #root .immersive-globe-page > .command-globe {
+    height: calc(100svh - var(--app-header-height) - var(--mobile-nav-space));
+    height: calc(100dvh - var(--app-header-height) - var(--mobile-nav-space));
+  }
+  #root .location-content .globe-page {
+    height: calc(100dvh - var(--app-header-height) - var(--location-mobile-bar-height, 64px) - var(--mobile-nav-space));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #root .mobile-expanding-nav a,
+  #root .mobile-expanding-nav a span { transition: none; }
 }
