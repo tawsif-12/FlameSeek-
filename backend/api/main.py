@@ -90,7 +90,8 @@ async def root() -> dict[str, str]:
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    return {"status": "ok", "service": APP_NAME}
+    return {"status": "ok", "service": APP_NAME,
+            "revision": os.getenv("RENDER_GIT_COMMIT", "local")}
 
 
 # Offline harmonization snapshot routes.
