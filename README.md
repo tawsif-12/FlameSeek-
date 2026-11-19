@@ -4,7 +4,9 @@ Vercel production requests use relative API URLs. `frontend/vercel.json` forward
 API and snapshot routes to `https://flameseek.onrender.com` before the SPA fallback.
 This keeps browser requests on the website's domain. `VITE_API_BASE_URL` is used
 only in development; update the rewrite destinations to change the production backend.
-Temporary live-map network/gateway errors are retried once. Permanent failures
+Cold downloads return a short 202 response and the browser polls while NASA data
+loads, rather than holding one gateway request open. Temporary live-map
+network/gateway errors are retried at most three times. Permanent failures
 show their error in the sidebar instead of hiding it inside Data details.
 
 Historical snapshots currently remain local. An empty cloud catalog means history

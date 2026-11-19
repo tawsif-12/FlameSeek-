@@ -39,7 +39,9 @@ export function getHarmonizedHotspots(days = 1, bbox?: [number, number, number, 
   const pending = globeRequests.get(key);
   if (pending) return pending;
   const request = (async () => {
-    for (let attempt = 0; ; attempt++) {
+    let failures = 0;
+    const deadline = Date.now() + 180000;
+    while (true) {
       try {
         const { data } = await api.get<CurrentHotspotsResponse>('/api/harmonized_hotspots', {
           params: { days, ...(bbox ? { bbox: bbox.join(',') } : {}) }, timeout: 120000,
@@ -47,11 +49,17 @@ export function getHarmonizedHotspots(days = 1, bbox?: [number, number, number, 
         if (!data || !Array.isArray(data.hotspots) || !data.metadata || typeof data.metadata !== 'object') {
           throw new Error('The API returned an invalid response. Check that the Vercel API proxy is deployed.');
         }
+        if (data.metadata.observation_loading) {
+          if (Date.now() >= deadline) throw new Error('NASA observations are still loading. Please try Refresh FIRMS shortly.');
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+          continue;
+        }
         return data;
       } catch (error) {
         const transient = axios.isAxiosError(error) && (!error.response || [502, 503, 504].includes(error.response.status));
-        if (attempt >= 1 || !transient) throw error;
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        if (!transient || failures >= 3 || Date.now() >= deadline) throw error;
+        failures++;
+        await new Promise((resolve) => setTimeout(resolve, 2000 * failures));
       }
     }
   })().finally(() => globeRequests.delete(key));

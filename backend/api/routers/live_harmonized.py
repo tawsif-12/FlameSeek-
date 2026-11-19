@@ -251,7 +251,16 @@ async def harmonized_hotspots(days: int = Query(1, ge=1, le=5), limit: int | Non
     if cached is None or stale:
         _start_refresh(days)
     if cached is None:
-        await _ready[days].wait()
+        # Do not hold the gateway connection open through a cold NASA download.
+        # Timing out this wait leaves the shared background refresh running.
+        try:
+            await asyncio.wait_for(_ready[days].wait(), timeout=5.0)
+        except asyncio.TimeoutError:
+            return Response(json.dumps({'hotspots': [], 'raw_hotspots': [], 'metadata': {
+                'observation_loading': True, 'data_source': 'initializing',
+                'processing_pending': True, 'refresh_in_progress': True,
+                'message': 'Downloading NASA observations. Retry shortly.'
+            }}), status_code=202, media_type='application/json', headers={'Retry-After': '3'})
         cached = _snapshots.get(days)
         if not cached:
             raise HTTPException(502, detail={'message': f'FIRMS observations unavailable: {_errors.get(days, "retry shortly")}'})
