@@ -337,6 +337,14 @@ export default function Pipeline3DTransition() {
   const [isPaused, setIsPaused] = useState(false);
   const [hasFocus, setHasFocus] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!window.matchMedia("(max-width: 1023px)").matches) return;
+    const bar = wrapperRef.current?.querySelector<HTMLElement>(".pipe-sequencer-bar");
+    const active = bar?.querySelector<HTMLElement>(".pipe-seq-step.active");
+    if (bar && active) {
+      bar.scrollTo({ left: active.offsetLeft - (bar.clientWidth - active.offsetWidth) / 2, behavior: "instant" });
+    }
+  }, [currentIndex]);
   const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   useEffect(() => {
     const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -416,7 +424,7 @@ export default function Pipeline3DTransition() {
       {/* ====================================================================
           TOP INTERACTIVE PIPELINE SEQUENCER TRACK
           ==================================================================== */}
-      <div className="pipe-sequencer-bar" aria-label="Pipeline sequence stages">
+      <div className="pipe-sequencer-bar" aria-label="Pipeline sequence stages" onTouchStart={event => event.stopPropagation()} onTouchEnd={event => event.stopPropagation()}>
         {PIPELINE_STAGES_DATA.map((stage, idx) => {
           const isActive = currentIndex === idx;
           return (

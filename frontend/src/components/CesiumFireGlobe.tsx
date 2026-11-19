@@ -51,7 +51,7 @@ const locations = {
 const nadirOrientation = { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 };
 const obliqueOrientation = { heading: Cesium.Math.toRadians(18), pitch: Cesium.Math.toRadians(-52), roll: 0 };
 
-const layerDefaults: Record<LayerKey, boolean> = { Terra: false, Aqua: false, "S-NPP": false, "NOAA-20": false, "NOAA-21": false, Harmonized: true, "Fire Events": false, "FRP Columns": false, "Forecast Corridor": true, Exposure: true, Boundaries: true };
+const layerDefaults: Record<LayerKey, boolean> = { Terra: true, Aqua: true, "S-NPP": true, "NOAA-20": true, "NOAA-21": true, Harmonized: false, "Fire Events": false, "FRP Columns": false, "Forecast Corridor": true, Exposure: true, Boundaries: true };
 const satelliteLayers: SatelliteLayer[] = ["Terra", "Aqua", "S-NPP", "NOAA-20", "NOAA-21"];
 const satelliteColors: Record<SatelliteLayer, string> = { Terra: "#22c55e", Aqua: "#38bdf8", "S-NPP": "#facc15", "NOAA-20": "#fb923c", "NOAA-21": "#e879f9" };
 // Esri's free reference overlay: country, state and district lines with place labels.
@@ -266,6 +266,7 @@ export default function CesiumFireGlobe() {
   const [mergedCount, setMergedCount] = useState<number | null>(null);
   const [rawObservationCount, setRawObservationCount] = useState<number | null>(null);
   const [mergedUnavailable, setMergedUnavailable] = useState(false);
+  const [observationsOnly, setObservationsOnly] = useState(false);
   const [backgroundRefresh, setBackgroundRefresh] = useState(false);
   const [processingPending, setProcessingPending] = useState(false);
   const loadSequence = useRef(0);
@@ -425,6 +426,7 @@ export default function CesiumFireGlobe() {
       setRawObservationCount(typeof response.metadata.raw_hotspot_count === "number" ? response.metadata.raw_hotspot_count : (response.raw_hotspots ?? response.hotspots).length);
       setHarmonizationRun(typeof response.metadata.harmonization_run === "string" ? response.metadata.harmonization_run : null);
       setMergedUnavailable(Boolean(response.metadata.processing_pending || response.metadata.harmonization_unavailable));
+      setObservationsOnly(response.metadata.live_processing_mode === "satellite_observations");
       setProcessingPending(Boolean(response.metadata.processing_pending));
       setBackgroundRefresh(Boolean(response.metadata.refresh_in_progress));
       setFeedState(response.metadata.partial_coverage ? "partial" : response.metadata.data_source === "live" ? "live" : response.metadata.data_source === "cached_actual" ? "cached" : "ready");
@@ -441,7 +443,8 @@ export default function CesiumFireGlobe() {
       setDataStatus(
         response.metadata.browser_cached ? String(response.metadata.message)
           : response.metadata.processing_pending ? `${sourceLabel}: ${Number(m.raw_hotspot_count).toLocaleString()} real observations loaded. Matching events in the background.`
-          : response.metadata.harmonization_unavailable ? `${sourceLabel}: event matching unavailable. Choose a satellite to view raw detections.`
+          : response.metadata.live_processing_mode === "satellite_observations" ? `${sourceLabel}: ${Number(m.raw_hotspot_count).toLocaleString()} satellite detections loaded. Event grouping is not enabled on this deployment.`
+          : response.metadata.harmonization_unavailable ? `${sourceLabel}: satellite detections loaded; event matching is temporarily unavailable.`
           : historical ? `${sourceLabel} · On ${historicalDate}: ${Number(m.returned_hotspot_count).toLocaleString()} satellite detections.`
           : `${sourceLabel} · ${periodLabels[period]}: ${Number(m.raw_hotspot_count).toLocaleString()} detections → ${Number(m.events_total ?? 0).toLocaleString()} footprint-merged events; showing ${Number(m.returned_hotspot_count).toLocaleString()}. Procedure Steps 1–4. Calibrated activity and Monte Carlo uncertainty await data.`,
       );
@@ -578,7 +581,8 @@ export default function CesiumFireGlobe() {
       try {
         if (!containerRef.current || disposed) return;
         const containerReady = await waitForContainerSize(containerRef.current);
-        if (!containerReady || !containerRef.current || disposed) {
+        if (disposed) return;
+        if (!containerReady || !containerRef.current) {
           setViewerError("3D map container is not ready yet.");
           return;
         }
@@ -1247,8 +1251,8 @@ export default function CesiumFireGlobe() {
           {activeInsight === "snapshot" && (
             <div className="insight-body snapshot-body">
               <div className="hud-stat"><span>Satellite heat detections</span><strong>{insightData.raw.length.toLocaleString()}</strong><small>MODIS {insightData.modis.toLocaleString()} / VIIRS {insightData.viirs.toLocaleString()}</small></div>
-              <div className="hud-stat"><span>Merged fire groups</span><strong>{mergedUnavailable ? "Not ready" : insightData.merged.length.toLocaleString()}</strong><small>Nearby detections grouped by place and time</small></div>
-              <div className="hud-stat"><span>Groups seen by multiple satellites</span><strong>{mergedUnavailable ? "Not ready" : insightData.multipleSatellites.toLocaleString()}</strong><small>Repeated observations, not independent confirmation</small></div>
+              <div className="hud-stat"><span>Merged fire groups</span><strong>{mergedUnavailable ? (observationsOnly ? "Not enabled" : "Not ready") : insightData.merged.length.toLocaleString()}</strong><small>Nearby detections grouped by place and time</small></div>
+              <div className="hud-stat"><span>Groups seen by multiple satellites</span><strong>{mergedUnavailable ? (observationsOnly ? "Not enabled" : "Not ready") : insightData.multipleSatellites.toLocaleString()}</strong><small>Repeated observations, not independent confirmation</small></div>
               <div className="hud-stat"><span>Highest measured heat output</span><strong>{insightData.maxFrp === null ? "Unavailable" : `${Math.round(insightData.maxFrp).toLocaleString()} MW`}</strong><small>Based on {insightData.powerBasis}; not a simultaneous total</small></div>
             </div>
           )}
@@ -1281,7 +1285,7 @@ export default function CesiumFireGlobe() {
           {activeInsight === "events" && (
             <div className="insight-body">
               <p className="insight-note">Ranked by the area covered by satellite pixels, not confirmed burned area. Select a group to open its details.</p>
-              {mergedUnavailable ? <p className="hud-empty">Merged groups are not ready yet. Raw detections remain available in the satellite layers.</p> : insightData.topEvents.length === 0 ? <p className="hud-empty">No merged groups with footprint measurements are available in this area and period.</p> : (
+              {mergedUnavailable ? <p className="hud-empty">{observationsOnly ? "Event grouping is not enabled on this deployment. Individual satellite detections are shown on the map." : "Merged groups are not ready yet. Raw detections remain available in the satellite layers."}</p> : insightData.topEvents.length === 0 ? <p className="hud-empty">No merged groups with footprint measurements are available in this area and period.</p> : (
                 <ol className="hud-events insight-event-list">{insightData.topEvents.map(point => <li key={point.harmonized!.event_id}><button type="button" onClick={() => { viewerRef.current?.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(point.lon, point.lat, 300000), duration: 1 }); void openDetection(point); }} aria-label={`Open fire group ${point.harmonized!.event_id}`}><strong>Group near {point.lat.toFixed(2)}, {point.lon.toFixed(2)}</strong><span>{point.harmonized!.footprint_area_km2.toLocaleString(undefined, { maximumFractionDigits: 2 })} square km observed footprint</span><small>{point.harmonized!.observations.toLocaleString()} detections / {point.frp === null ? "Heat output unavailable" : `${Math.round(point.frp).toLocaleString()} MW peak heat output`}</small></button></li>)}</ol>
               )}
             </div>
@@ -1303,20 +1307,20 @@ export default function CesiumFireGlobe() {
           {feedState === "cached" && <p className="refresh-timestamp" role="status">Showing saved observations. Live updates retry automatically.</p>}
         </section>
         <section className="harmonization-status" aria-live="polite" aria-busy={feedState === "loading"}>
-          <p className={`processing-state ${feedState}`}>{feedState === "loading" ? "Loading..." : feedState === "failed" ? "Processing failed" : processingPending ? "Observations loaded. Matching events..." : mergedUnavailable ? "Merged output unavailable" : period === "historical" ? "Historical observations loaded" : "Ready"}</p>
+          <p className={`processing-state ${feedState}`}>{feedState === "loading" ? "Loading..." : feedState === "failed" ? "Processing failed" : processingPending ? "Observations loaded. Matching events..." : observationsOnly ? "Ready: Satellite observations" : mergedUnavailable ? "Observations ready: Event matching unavailable" : period === "historical" ? "Historical observations loaded" : "Ready"}</p>
           {feedState === "loading" && <span className="processing-indicator" aria-label="Processing observations" />}
           {feedState !== "loading" && feedState !== "failed" && observationSummary.raw !== null && (
             <div className="observation-count-summary">
               <p className="refresh-timestamp">{period === "historical" ? historicalDate : periodLabels[period]}{filterToAoi && aoi ? " in the selected area" : " worldwide"}</p>
               <p className="detection-count"><strong>{observationSummary.raw.toLocaleString()}</strong> satellite heat detections</p>
               {observationSummary.merged !== null && <p className="merged-count"><strong>{observationSummary.merged.toLocaleString()}</strong> merged fire events</p>}
-              {period !== "historical" && <p className="today-fire-count">Today (UTC): {observationSummary.todayRaw.toLocaleString()} heat detections{observationSummary.merged !== null ? `; ${observationSummary.todayMerged.toLocaleString()} merged event${observationSummary.todayMerged === 1 ? "" : "s"} last seen today.` : "; event matching is not ready yet."}</p>}
+              {period !== "historical" && <p className="today-fire-count">Today (UTC): {observationSummary.todayRaw.toLocaleString()} heat detections{observationSummary.merged !== null ? `; ${observationSummary.todayMerged.toLocaleString()} merged event${observationSummary.todayMerged === 1 ? "" : "s"} last seen today.` : observationsOnly ? ". Event grouping is not enabled." : "; event matching is not ready yet."}</p>}
               <p className="refresh-timestamp">Several detections may belong to one fire. Merged events are estimates, not confirmed wildfire counts.</p>
             </div>
           )}
           {feedState === "failed" && <p className="refresh-timestamp" role="alert">{dataStatus}</p>}
           {layers.Harmonized && mergedUnavailable && rawHotspots.length > 0 && <p className="refresh-timestamp">Showing individual satellite detections while merged fire events are unavailable.</p>}
-          <HarmonizationProgress runId={harmonizationRun} />
+          {!observationsOnly && <HarmonizationProgress runId={harmonizationRun} />}
           <details className="sidebar-data-details">
             <summary>Data details</summary>
           <p className="tiles-status">{dataStatus}</p>
@@ -1337,7 +1341,7 @@ export default function CesiumFireGlobe() {
             })}
           </div>
           <div className="compact-layer-grid">
-            <button className={layers.Harmonized ? "active" : ""} type="button" aria-pressed={layers.Harmonized} disabled={period === "historical" || mergedUnavailable || feedState === "loading"} title={mergedUnavailable ? "Merged output is not ready. Raw detections are available through the satellite buttons." : "Footprint-merged events from procedure Steps 1-4; later harmonization stages are not computed here."} onClick={() => setLayers(cur => toggleObservationLayer(cur, "Harmonized", satelliteLayers))}>Merged map points · {hotspots.filter((h) => h.harmonized && (!filterToAoi || !aoi || aoiContains(aoi, h.lat, h.lon))).length.toLocaleString()}</button>
+            <button className={layers.Harmonized ? "active" : ""} type="button" aria-pressed={layers.Harmonized} disabled={period === "historical" || mergedUnavailable || feedState === "loading"} title={observationsOnly ? "Event grouping is not enabled on this deployment. Individual satellite detections are available." : mergedUnavailable ? "Merged output is not ready. Raw detections are available through the satellite buttons." : "Footprint-merged events from procedure Steps 1-4; later harmonization stages are not computed here."} onClick={() => setLayers(cur => toggleObservationLayer(cur, "Harmonized", satelliteLayers))}>Merged map points · {hotspots.filter((h) => h.harmonized && (!filterToAoi || !aoi || aoiContains(aoi, h.lat, h.lon))).length.toLocaleString()}</button>
           </div>
           {mergedCount !== null && <p className="refresh-timestamp">Footprint-merged events (Steps 1-4). Sensor calibration, diurnal correction and activity uncertainty are not computed for this live layer.</p>}
           {mergedCount !== null && <p className="refresh-timestamp">{mergedSatelliteCounts.multiple.toLocaleString()} multi-satellite events · {mergedSatelliteCounts.single.toLocaleString()} single-satellite events in this area. Satellite buttons show raw detections; choose Merged map points for combined events.</p>}

@@ -220,3 +220,10 @@
   #root .oc-home .pipe-navigation-row .pipe-arrow-next { grid-column: 3; }
   #root .oc-home .pipe-navigation-row .pipe-bottom-summary { grid-area: 1 / 2; width: 100%; box-sizing: border-box; }
 }
+/* Keep the step order stable in one compact, horizontally scrollable row. */
+@media (max-width: 1023px) {
+  #root .oc-home .pipe-transition-wrapper .pipe-sequencer-bar { position: relative; display: flex; flex-wrap: nowrap; justify-content: flex-start; width: 100%; box-sizing: border-box; padding: 8px; gap: 4px; overflow-x: auto; overflow-y: auto; overscroll-behavior-x: contain; touch-action: pan-x pan-y; scroll-padding-inline: 8px; border-radius: 16px; }
+  #root .oc-home .pipe-transition-wrapper .pipe-seq-step { flex: 0 0 auto; grid-area: auto; min-width: 44px; min-height: 44px; }
+  #root .oc-home .pipe-transition-wrapper .pipe-seq-step.active { grid-area: auto; padding-inline: 10px; }
+  #root .oc-home .pipe-transition-wrapper .pipe-seq-step.active .pipe-seq-label { white-space: nowrap; }
+}
