@@ -5,7 +5,7 @@ type Theme = "day" | "night";
 
 export default function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>(() =>
-    document.documentElement.dataset.theme === "day" ? "day" : "night",
+    document.documentElement.dataset.theme === "night" ? "night" : "day",
   );
 
   useEffect(() => {
