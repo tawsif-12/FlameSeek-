@@ -466,3 +466,22 @@ body { margin: 0; }
   #root .oc-home .oc-hero-subtitle { font-size: 16px; }
   #root .oc-home .oc-hero-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 }
+/* Floating mobile controls across every route; desktop header stays unchanged. */
+@media (max-width: 1023px) {
+  #root > .mission-header { position: absolute; inset: 0 0 auto; height: 0; min-height: 0; padding: 0; margin: 0; background: transparent; border: 0; box-shadow: none; backdrop-filter: none; pointer-events: none; overflow: visible; }
+  #root > .mission-header > .brand-mark,
+  #root > .mission-header > .header-actions { position: absolute; top: max(16px, env(safe-area-inset-top)); width: 44px; height: 44px; margin: 0; pointer-events: auto; }
+  #root > .mission-header > .brand-mark { left: max(16px, env(safe-area-inset-left)); flex: none; justify-content: center; }
+  #root > .mission-header > .brand-mark > div { display: none; }
+  #root > .mission-header .brand-logo { width: 42px; height: 42px; flex-basis: 42px; }
+  #root > .mission-header > .header-actions { right: max(16px, env(safe-area-inset-right)); }
+  #root > .mission-header .theme-toggle { width: 44px; height: 44px; padding: 0; border-radius: 50%; }
+  #root > .mission-header .theme-toggle span { display: none; }
+  #root > .immersive-globe-page { padding-top: 0; }
+  #root > .immersive-globe-page > .command-globe { height: 100svh; height: 100dvh; }
+  #root .command-globe.fire-now :is(.mobile-map-controls, .floating-place-button) { top: calc(max(16px, env(safe-area-inset-top)) + 60px); }
+  #root .command-globe.fire-now :is(.scene-panel, .floating-place-search, .insight-drawer) { top: calc(max(16px, env(safe-area-inset-top)) + 114px); }
+}
+@media (max-width: 1023px) {
+  #root .command-globe.fire-now :is(.cesium-error-panel, .selection-status, .draw-hint) { top: calc(max(16px, env(safe-area-inset-top)) + 114px); }
+}

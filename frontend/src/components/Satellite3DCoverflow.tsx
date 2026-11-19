@@ -289,6 +289,7 @@ export default function Satellite3DCoverflow({ onSatelliteChange }: Satellite3DC
       </div>
 
       {/* Navigation Arrows */}
+      <div className="sat-navigation-row">
       <button
         type="button"
         className="sat-nav-arrow sat-arrow-left"
@@ -306,6 +307,9 @@ export default function Satellite3DCoverflow({ onSatelliteChange }: Satellite3DC
       >
         <ChevronRight size={24} />
       </button>
+
+      <span className="sat-mobile-counter" aria-live="polite">{String(currentIndex + 1).padStart(2, "0")} / {String(SATELLITES_DATA.length).padStart(2, "0")}</span>
+      </div>
 
       {/* Indicator Pill Dots */}
       <div className="sat-indicators-bar" aria-label="Choose satellite">

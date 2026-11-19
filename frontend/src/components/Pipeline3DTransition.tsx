@@ -531,6 +531,7 @@ export default function Pipeline3DTransition() {
       </div>
 
       {/* Navigation Arrows */}
+      <div className="pipe-navigation-row">
       <button
         type="button"
         className="pipe-nav-arrow pipe-arrow-prev"
@@ -557,6 +558,7 @@ export default function Pipeline3DTransition() {
         <span className="pipe-summary-text">
           Active Evidence Filter: <span style={{ color: activeStage.accentColor }}>{activeStage.title}</span> — {activeStage.badge}
         </span>
+      </div>
       </div>
     </div>
   );

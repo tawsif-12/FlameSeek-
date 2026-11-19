@@ -131,3 +131,26 @@
   .sat-coverflow-wrapper .sat-3d-card,
   .sat-coverflow-wrapper .sat-nav-arrow { transition: none; }
 }
+.sat-navigation-row { display: contents; }
+.sat-mobile-counter { display: none; }
+@media (max-width: 1023px) {
+  #root .oc-home .sat-coverflow-wrapper { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; height: auto; min-height: 0; padding: 12px 0; overflow: visible; }
+  #root .oc-home .sat-coverflow-stage { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; justify-items: center; width: 100%; height: auto; min-height: 0; overflow: clip; overflow-clip-margin: 12px; perspective: none; }
+  #root .oc-home .sat-3d-card { grid-area: 1 / 1; align-self: start; width: min(100%, 380px); height: auto; min-height: 0; }
+  #root .oc-home .sat-3d-card.active-center { position: relative; }
+  #root .oc-home .sat-card-media { height: 180px; flex: 0 0 180px; }
+  #root .oc-home .sat-card-footer { flex: none; gap: 10px; }
+  #root .oc-home .sat-card-cta-row { margin-top: 0; }
+  #root .oc-home .sat-card-cta-btn { min-height: 44px; }
+  #root .oc-home .sat-navigation-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 12px; align-items: center; width: 100%; }
+  #root .oc-home .sat-navigation-row .sat-nav-arrow { position: relative; inset: auto; transform: none; width: 44px; height: 44px; grid-row: 1; margin: 0; }
+  #root .oc-home .sat-navigation-row .sat-arrow-left { grid-column: 1; }
+  #root .oc-home .sat-navigation-row .sat-arrow-right { grid-column: 3; }
+  #root .oc-home .sat-mobile-counter { display: block; grid-area: 1 / 2; text-align: center; color: var(--oc-text-primary); font: 600 13px var(--mission-font); }
+  #root .oc-home .sat-indicators-bar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 0; margin: 0; width: 100%; }
+  #root .oc-home .sat-indicator-pill { min-width: 0; min-height: 44px; justify-content: center; }
+}
+@media (max-width: 1023px) {
+  #root .oc-home .sat-indicator-pill { background: var(--oc-bg-card); color: var(--oc-text-primary); border: 1px solid var(--oc-border-subtle); }
+  #root .oc-home .sat-indicator-pill.active { background: color-mix(in srgb, var(--oc-cyan) 18%, var(--oc-bg-card)); border-color: var(--oc-cyan); }
+}

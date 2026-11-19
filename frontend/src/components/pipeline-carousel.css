@@ -212,3 +212,11 @@
   #root .oc-home .pipe-transition-wrapper .pipe-bottom-summary { grid-area: 3 / 1; width: calc(100% - 112px); min-width: 0; max-width: 100%; margin: 0; padding: 8px; flex-direction: column; gap: 4px; text-align: center; border-radius: 16px; }
   #root .oc-home .pipe-transition-wrapper .pipe-summary-text { white-space: normal; overflow-wrap: anywhere; }
 }
+.pipe-navigation-row { display: contents; }
+@media (max-width: 1023px) {
+  #root .oc-home .pipe-navigation-row { grid-area: 3 / 1; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 12px; align-items: center; width: 100%; }
+  #root .oc-home .pipe-navigation-row .pipe-nav-arrow { grid-row: 1; }
+  #root .oc-home .pipe-navigation-row .pipe-arrow-prev { grid-column: 1; }
+  #root .oc-home .pipe-navigation-row .pipe-arrow-next { grid-column: 3; }
+  #root .oc-home .pipe-navigation-row .pipe-bottom-summary { grid-area: 1 / 2; width: 100%; box-sizing: border-box; }
+}
