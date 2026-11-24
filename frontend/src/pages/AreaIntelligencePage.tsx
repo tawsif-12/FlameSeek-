@@ -97,7 +97,7 @@ export default function AreaIntelligencePage() {
     return [parts[0] ?? name, parts.slice(1).join(", ")];
   }, [name]);
 
-  // Quick look and full history run independently. Both are Fire Memory jobs:
+  // Quick look and full history run in sequence. Both are Fire Memory jobs:
   // identical requests share one backend job, and downloaded chunks are cached and reused.
   useEffect(() => {
     if (!aoi) return;
@@ -117,16 +117,23 @@ export default function AreaIntelligencePage() {
     savedPlacePipeline(aoi, years).then((saved) => {
       if (saved && mine()) setPipe((current) => current && !current.provenance?.saved_preview ? current : saved);
     }).catch(() => {});
-    // Start independent jobs together; a slow quick look must not block history.
-    runJob(startFireMemory(aoi, QUICK_YEARS, HUB_SENSORS, 30), (j) => mine() && setQuickJob(j))
-      .then((q) => mine() && setQuick(q))
-      .catch((e) => mine() && setQuickError(normalizeApiError(e)));
-    runJob(startPlacePipeline(aoi, years), (j) => mine() && setPipeJob(j))
-      .then((r) => mine() && setPipe(r))
-      .catch((e) => mine() && setPipeError(normalizeApiError(e)));
-    runJob(startFireMemory(aoi, years, HUB_SENSORS, 30), (j) => mine() && setFullJob(j))
-      .then((f) => { if (mine()) { setFull(f); shareMemory(f); } })
-      .catch((e) => mine() && setFullError(normalizeApiError(e)));
+    // Give the quick look priority on memory-constrained backend instances.
+    void (async () => {
+      try {
+        const q = await runJob(startFireMemory(aoi, QUICK_YEARS, HUB_SENSORS, 30), (j) => mine() && setQuickJob(j));
+        if (mine()) setQuick(q);
+      } catch (e) { if (mine()) setQuickError(normalizeApiError(e)); }
+      if (!mine()) return;
+      try {
+        const f = await runJob(startFireMemory(aoi, years, HUB_SENSORS, 30), (j) => mine() && setFullJob(j));
+        if (mine()) { setFull(f); shareMemory(f); }
+      } catch (e) { if (mine()) setFullError(normalizeApiError(e)); }
+      if (!mine()) return;
+      try {
+        const r = await runJob(startPlacePipeline(aoi, years), (j) => mine() && setPipeJob(j));
+        if (mine()) setPipe(r);
+      } catch (e) { if (mine()) setPipeError(normalizeApiError(e)); }
+    })();
     return () => { ++runRef.current; };
   }, [aoi, years]); // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -157,11 +157,20 @@ export async function runJob<T>(start: Promise<Job<T>>, onProgress: (job: Job<T>
   let job = await start;
   onProgress(job);
   let polls = 0;
+  let transientFailures = 0;
   while (job.status === "queued" || job.status === "running") {
     await new Promise((resolve) => setTimeout(resolve, polls++ === 0 ? 150 : 1500));
     if (signal?.cancelled) throw new Error("cancelled");
-    job = await getJob<T>(job.id);
-    onProgress(job);
+    try {
+      job = await getJob<T>(job.id);
+      transientFailures = 0;
+      onProgress(job);
+    } catch (error) {
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      const transient = axios.isAxiosError(error) && (!error.response || status === 408 || status === 429 || (status !== undefined && status >= 500));
+      if (!transient || ++transientFailures > 5) throw error;
+      onProgress({ ...job, message: "Connection interrupted; retrying analysis status" });
+    }
   }
   if (job.status === "failed" || job.result === null) throw new Error(job.error ?? "Analysis failed");
   return job.result;
