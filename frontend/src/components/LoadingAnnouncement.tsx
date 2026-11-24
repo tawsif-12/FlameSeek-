@@ -8,7 +8,10 @@ export default function LoadingAnnouncement() {
  const [now, setNow] = useState(Date.now());
  const [atTop, setAtTop] = useState(true);
  useEffect(() => {
-   const update = () => setAtTop(Math.max(window.scrollY, document.documentElement.scrollTop, document.body.scrollTop, document.getElementById("root")?.scrollTop || 0) < 8);
+   const update = (event?: Event) => {
+     const scrolledElement = event?.target instanceof Element ? event.target.scrollTop : 0;
+     setAtTop(Math.max(window.scrollY, document.documentElement.scrollTop, document.body.scrollTop, document.getElementById("root")?.scrollTop || 0, scrolledElement) < 8);
+   };
    update();
    window.addEventListener("scroll", update, true);
    return () => window.removeEventListener("scroll", update, true);
@@ -18,5 +21,5 @@ export default function LoadingAnnouncement() {
  if (!atTop || !tasks.length || now - Math.min(...tasks.map(task => task.started)) < 1000) return null;
  const seconds = Math.max(0, Math.floor((now - Math.min(...tasks.map(task => task.started))) / 1000));
  const elapsed = seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
- return <div className="loading-announcement" role="status" aria-live="polite"><span className="loading-announcement__text">{tasks[0].reason} · Elapsed: {elapsed} · Load time varies with the data provider and your connection</span></div>;
+ return <div className="loading-announcement-anchor"><div className="loading-announcement" role="status" aria-live="polite"><span className="loading-announcement__text">{tasks[0].reason} ? Elapsed: {elapsed} ? Load time varies with the data provider and your connection</span></div></div>;
 }
