@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { normalizeApiError, searchPlaces, resolvePlace } from '../api/client';
+import { localSuggestions, rememberPlace } from '../api/localPlaces';
 import { areaFromUrl, dashboardUrl, placeArea } from '../api/locationRoutes';
 import AOISelector from '../components/AOISelector';
 import { useAppContext } from '../context/AppContext';
@@ -16,6 +17,7 @@ export default function SearchPage() {
   const [results, setResults] = useState<PlaceResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savedOnly, setSavedOnly] = useState(false);
   const [searched, setSearched] = useState(false);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
@@ -46,7 +48,7 @@ export default function SearchPage() {
       } finally { if (id === generation.current) setSearching(false); }
     }
     const area = placeArea(place);
-    if (area) { openArea(area); return; }
+    if (area) { rememberPlace(place); openArea(area); return; }
     // Some live providers return city centres without a usable polygon.
     // Keep the selection usable and state the analysis extent in its name.
     if (['country', 'administrative'].includes(place.addresstype) || ['country', 'administrative'].includes(place.type)) {
@@ -68,14 +70,21 @@ export default function SearchPage() {
     const id = generation.current;
     const request = new AbortController(); controller.current = request;
     if (!suggest) setQuery(name);
-    setSearching(true); setError(null); setResults([]); setOpen(true); setActive(-1); setSearched(true); setPoint(null);
+    const local = localSuggestions(name);
+    setSearching(true); setError(null); setSavedOnly(false); setResults(local); setOpen(true); setActive(-1); setSearched(true); setPoint(null);
     try {
       const found = await searchPlaces(name, request.signal, suggest);
       if (id !== generation.current || request.signal.aborted) return;
-      if (fromLink && found[0]) { choose(found[0]); return; }
-      setResults(found);
+      const combined = [...local, ...found.filter(item => !local.some(saved => saved.place_id && saved.place_id === item.place_id))];
+      if (fromLink && combined[0]) { choose(combined[0]); return; }
+      setResults(combined);
     } catch (reason) {
-      if (id === generation.current && !request.signal.aborted) setError(normalizeApiError(reason));
+      if (id === generation.current && !request.signal.aborted) {
+        if (local.length) {
+          setResults(local); setSavedOnly(true);
+          if (fromLink) void choose(local[0]);
+        } else setError(normalizeApiError(reason));
+      }
     } finally { if (id === generation.current) setSearching(false); }
   }
   useEffect(() => {
@@ -97,7 +106,7 @@ export default function SearchPage() {
         <form aria-busy={searching} className="minimal-search-box explore-search-box" onSubmit={event => { event.preventDefault(); if (open && results.length) void choose(results[active >= 0 ? active : 0]); else void search(query, true, true); }}>
           <span aria-hidden="true">⌕</span>
           <input ref={input} autoFocus value={query} placeholder={'Try fires in Bangladesh or Sundarbans forest'} aria-label="Search for a location" role="combobox" aria-autocomplete="list" aria-expanded={open && results.length > 0} aria-controls="explore-places" aria-activedescendant={open && active >= 0 ? `explore-place-${active}` : undefined} aria-describedby="search-guidance"
-            onChange={event => { const value = event.target.value; invalidate(); setAoi(null); setQuery(value); setResults([]); setOpen(false); setActive(-1); setError(null); setSearched(false); setPoint(null); if (value.trim().length >= 2) { setSearching(true); setOpen(true); suggestionTimer.current = setTimeout(() => void search(value, false, true), 600); } }}
+            onChange={event => { const value = event.target.value; invalidate(); setAoi(null); setQuery(value); setResults(localSuggestions(value)); setOpen(value.trim().length >= 2); setActive(-1); setError(null); setSavedOnly(false); setSearched(false); setPoint(null); if (value.trim().length >= 2) { setSearching(true); setOpen(true); suggestionTimer.current = setTimeout(() => void search(value, false, true), 600); } }}
             onKeyDown={event => {
               if (event.key === 'Escape') { event.preventDefault(); invalidate(); setOpen(false); setActive(-1); }
               if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && results.length) { event.preventDefault(); setOpen(true); setActive(index => event.key === 'ArrowDown' ? (index + 1) % results.length : (index < 0 ? results.length - 1 : (index - 1 + results.length) % results.length)); }
@@ -107,6 +116,7 @@ export default function SearchPage() {
           <button type="submit">Search</button>
         </form>
         {open && !!results.length && <ul id="explore-places" className="minimal-place-results explore-place-results" role="listbox" aria-label="Matching locations">{results.map((place, index) => <li id={`explore-place-${index}`} key={`${place.place_id || place.name}-${place.center}`} role="option" aria-selected={index === active}><button type="button" onClick={() => choose(place)} onMouseEnter={() => setActive(index)}><span><strong>{place.place_name || place.name.split(',')[0]}</strong><small>{place.parent_region || place.name.split(',').slice(1).join(', ')}</small></span><em>{(place.addresstype || place.type || 'place').replace(/_/g, ' ')}</em></button></li>)}</ul>}
+        {savedOnly && <p className="search-status" role="status">Live search is temporarily unavailable. Showing built-in or previously selected places.</p>}
         <p id="search-guidance" className="search-guidance">Press Enter to open the first suggestion, or use the arrow keys to choose another location.</p>
         <p className="search-attribution">Place suggestions from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> via <a href="https://photon.komoot.io" target="_blank" rel="noreferrer">Photon</a> and <a href="https://open-meteo.com/en/docs/geocoding-api" target="_blank" rel="noreferrer">GeoNames via Open-Meteo</a>.</p>
         <button className="explore-map-button" type="button" onClick={() => { setMapOpen(true); if (!mapOpen) setAoi(null); }}>Select an area on the map</button>
