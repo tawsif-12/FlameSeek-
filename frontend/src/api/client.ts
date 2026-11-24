@@ -35,6 +35,7 @@ api.interceptors.response.use(response => { pendingAnnouncements.get(response.co
 
 export function normalizeApiError(error: unknown): string {
   if (axios.isAxiosError(error)) {
+    if (error.response?.status === 429) return "Search is receiving too many requests. Please wait a moment and try again.";
     const detail = error.response?.data?.detail;
     if (detail?.message) return detail.message;
     if (typeof detail === "string") return detail;
@@ -120,8 +121,22 @@ export async function getEvent(eventId: string): Promise<FireEvent> {
 }
 
 export async function searchPlaces(q: string, signal?: AbortSignal, suggest = false): Promise<PlaceResult[]> {
-  const { data } = await api.get<{ results: PlaceResult[] }>("/api/places/search", { params: { q, suggest }, signal, headers: { "Cache-Control": "no-cache" } });
-  return data.results;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const { data } = await api.get<{ results: PlaceResult[] }>("/api/places/search", { params: { q, suggest }, signal, headers: { "Cache-Control": "no-cache" } });
+      return data.results;
+    } catch (error) {
+      if (!axios.isAxiosError(error) || error.response?.status !== 429 || attempt >= 2 || signal?.aborted) throw error;
+      const retryAfter = Number(error.response.headers["retry-after"]);
+      const delay = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter * 1000, 8000) : 1500 * (attempt + 1);
+      await new Promise<void>((resolve, reject) => {
+        const onAbort = () => { window.clearTimeout(timer); reject(new DOMException("Search cancelled", "AbortError")); };
+        const timer = window.setTimeout(() => { signal?.removeEventListener("abort", onAbort); resolve(); }, delay);
+        signal?.addEventListener("abort", onAbort, { once: true });
+        if (signal?.aborted) onAbort();
+      });
+    }
+  }
 }
 
 // Repeated navigation and StrictMode mounts share identical analysis requests.
