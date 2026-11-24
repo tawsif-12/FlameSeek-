@@ -1,3 +1,4 @@
+.loading-announcement-anchor { position: relative; height: 0; z-index: 19; }
 ﻿.loading-announcement { position: absolute; z-index: 19; top: max(var(--app-header-height), 76px); left: 0; right: 0; overflow: hidden; pointer-events: none; background: #ff7180; color: #1a2940; border-bottom: 1px solid #d85c70; min-height: 36px; display: flex; align-items: center; font-size: 13px; font-weight: 700; }
 .loading-announcement__text { display: block; white-space: nowrap; min-width: max-content; padding-left: 100%; animation: loading-announcement-scroll 24s linear infinite; }
 @keyframes loading-announcement-scroll { from { transform: translateX(0); } to { transform: translateX(-100%); } }
