@@ -1,5 +1,6 @@
 import axios from "axios";
 import { API_BASE } from "./base";
+import { beginLoading, loadingReason } from "./loading";
 import { saveObservations, savedObservations } from "./observationCache";
 import type {
   PlacePipelineSummary,
@@ -19,6 +20,17 @@ import type {
 const api = axios.create({
   baseURL: API_BASE,
   timeout: 180000,
+});
+
+const pendingAnnouncements = new WeakMap<object, () => void>();
+api.interceptors.request.use(config => {
+  const path = config.url || "";
+  if (!/\/jobs\/|\/saved$|\/status$|places\/search/.test(path)) pendingAnnouncements.set(config, beginLoading(loadingReason(path)));
+  return config;
+});
+api.interceptors.response.use(response => { pendingAnnouncements.get(response.config)?.(); return response; }, error => {
+  if (error?.config) pendingAnnouncements.get(error.config)?.();
+  return Promise.reject(error);
 });
 
 export function normalizeApiError(error: unknown): string {
@@ -154,6 +166,8 @@ export async function getJob<T>(id: string): Promise<Job<T>> {
 
 /** Poll a background job until it finishes, reporting progress along the way. */
 export async function runJob<T>(start: Promise<Job<T>>, onProgress: (job: Job<T>) => void, signal?: { cancelled: boolean }): Promise<T> {
+  const finish = beginLoading("Analyzing satellite history; NASA archive requests can take several minutes");
+  try {
   let job = await start;
   onProgress(job);
   let polls = 0;
@@ -174,6 +188,7 @@ export async function runJob<T>(start: Promise<Job<T>>, onProgress: (job: Job<T>
   }
   if (job.status === "failed" || job.result === null) throw new Error(job.error ?? "Analysis failed");
   return job.result;
+  } finally { finish(); }
 }
 
 export function startEvidence(eventId: string, refresh = false) {

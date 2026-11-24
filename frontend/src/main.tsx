@@ -9,6 +9,7 @@ import BrandMark from "./components/BrandMark";
 import { useMobileLayout } from "./lib/useMobileLayout";
 import { House, Flame, Search, Database, BookOpen } from "lucide-react";
 import RouteLoadingFallback from "./components/RouteLoadingFallback";
+import LoadingAnnouncement from "./components/LoadingAnnouncement";
 import "./theme.css";
 import "./responsive.css";
 
@@ -128,6 +129,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <LanguageProvider>
       <Router>
         <Header />
+        <LoadingAnnouncement />
         <React.Suspense fallback={<RouteLoadingFallback />}>
         <Routes>
           <Route path="/" element={<HomePage />} />

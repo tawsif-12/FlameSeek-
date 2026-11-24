@@ -1,4 +1,8 @@
+import { useEffect } from "react";
+import { beginLoading } from "../api/loading";
+
 export default function RouteLoadingFallback({ immersive = false }: { immersive?: boolean }) {
+  useEffect(() => beginLoading("Loading the page and its resources"), []);
   return (
     <main className={`route-loading ${immersive ? "route-loading--immersive" : "content-page"}`} role="status" aria-live="polite">
       <div className="route-loading__inner">
