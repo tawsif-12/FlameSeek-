@@ -1,5 +1,7 @@
 """Fresh Photon suggestions; fetch full OSM boundaries only after selection."""
 import asyncio
+import json
+from pathlib import Path
 import math
 import os
 import time
@@ -104,6 +106,15 @@ async def suggest_places(query: str, limit: int = 8):
 
 
 async def resolve_place(place_id: str):
+    # An OSM-derived boundary is bundled for Bangladesh so an upstream outage
+    # cannot prevent selection. This is a real administrative polygon, not a box.
+    if place_id in {'osm:relation:184640', 'geonames:1210997'}:
+        source = Path(__file__).resolve().parent / 'data' / 'bangladesh-osm.json'
+        records = json.loads(source.read_text(encoding='utf-8'))
+        match = next((result for result in place_results(records, '')
+                      if result.get('place_id') == 'osm:relation:184640' and result.get('geometry')), None)
+        if match:
+            return {**match, 'boundary_source': 'OpenStreetMap Nominatim, bundled 2026-11-24'}
     if place_id.startswith('geonames:'):
         data = await request_json(f'{GEOCODING_URL}/get', service='Open-Meteo location lookup',
                                   params={'id': place_id.split(':')[1], 'language': 'en'},
@@ -138,6 +149,6 @@ async def resolve_place(place_id: str):
                               params={'osm_ids': code, 'format': 'jsonv2', 'polygon_geojson': 1,
                                       'polygon_threshold': 0.005, 'addressdetails': 1, 'namedetails': 1,
                                       'accept-language': 'en'},
-                              ttl_seconds=0, timeout=15, retries=0)
+                              ttl_seconds=30 * 86400, disk_namespace='place_boundaries', timeout=15, retries=0)
     results = place_results(data, '')
     return next((result for result in results if result.get('place_id') == place_id), None)
