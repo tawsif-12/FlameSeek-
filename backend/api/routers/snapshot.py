@@ -2,7 +2,7 @@
 from pathlib import Path
 from datetime import timedelta
 import importlib.util
-import json,math,sqlite3
+import json,math,sqlite3,os
 import logging
 from time import perf_counter
 from fastapi import APIRouter,HTTPException,Query,Request
@@ -17,6 +17,7 @@ from search_geometry import PreparedArea
 from snapshot_connections import POOL
 SEARCH_LOG=logging.getLogger('flameseek.search')
 FALLBACK_WARNINGS=BoundedCache(size=128,ttl=3600)
+MANIFEST_CACHE=BoundedCache(size=1,ttl=30)
 ROOT=Path(__file__).resolve().parents[2]
 MANIFEST_PATH=ROOT/'data/processed/snapshot_manifest.json'
 _spec=importlib.util.spec_from_file_location('flameseek_snapshot_translation',ROOT/'pipeline/translate.py')
@@ -24,6 +25,17 @@ _translation=importlib.util.module_from_spec(_spec);_spec.loader.exec_module(_tr
 
 
 def manifest():
+    url=os.getenv('AIVEN_DATABASE_URL')
+    if url:
+        from postgres_snapshots import read_manifest
+        try:
+            cached=MANIFEST_CACHE.get('current')
+            if cached is None:
+                cached=read_manifest(url);MANIFEST_CACHE.put('current',cached)
+            return cached
+        except Exception as exc:
+            SEARCH_LOG.error('PostgreSQL manifest unavailable: %s',type(exc).__name__)
+            return dict(default_window='current_2026',windows={},translation={})
     if not MANIFEST_PATH.exists():return dict(default_window='current_2026',windows={},translation={})
     return json.loads(MANIFEST_PATH.read_text(encoding='utf-8'))
 
@@ -54,7 +66,16 @@ router=APIRouter(route_class=SnapshotRoute)
 
 def connect(window):
     data=manifest();window=window or data['default_window']
-    if window not in data['windows']:raise HTTPException(400,'Unknown or unavailable processing window')
+    if window not in data['windows']:
+        if os.getenv('AIVEN_DATABASE_URL') and not data['windows']: raise HTTPException(503,'Historical database is unavailable or not yet imported')
+        raise HTTPException(400,'Unknown or unavailable processing window')
+    url=os.getenv('AIVEN_DATABASE_URL')
+    if url:
+        from postgres_snapshots import Connection
+        try: return Connection(url,window),window
+        except Exception as exc:
+            SEARCH_LOG.error('PostgreSQL snapshot unavailable: %s',type(exc).__name__)
+            raise HTTPException(503,'Historical database is unavailable') from exc
     filename=data['windows'][window].get('snapshot_file',window+'.sqlite')
     if Path(filename).name!=filename:raise HTTPException(503,'Invalid snapshot filename')
     path=ROOT/'data/processed/snapshots'/filename
@@ -115,6 +136,8 @@ def search_area(payload):
 def event_candidates(con,box):
     w,s,e,n=box
     exact='lon BETWEEN ? AND ? AND lat BETWEEN ? AND ?';params=[w,e,s,n]
+    if getattr(con,'postgres',False):
+        return 'point(lon,lat) <@ box(point(?,?),point(?,?)) AND '+exact, [w,s,e,n]+params
     if con.execute("SELECT 1 FROM sqlite_master WHERE name='event_spatial_index'").fetchone():
         # R-Tree uses outward-rounded float32 bounds; always recheck exact coordinates.
         exact='rowid IN (SELECT event_id FROM event_spatial_index WHERE min_lon<=? AND max_lon>=? AND min_lat<=? AND max_lat>=?) AND '+exact
@@ -148,6 +171,24 @@ def search_fires(payload:FireSearch,window:str|None=None,limit:int=Query(2000,ge
     area=PreparedArea(search_area(payload))
     con,window=connect(window);meta=metadata(window,con)
     try:
+        if getattr(con,'postgres',False):
+            where,params=event_candidates(con,area.bbox)
+            rows=con.execute('SELECT lon,lat,fire_id FROM events WHERE '+where+' ORDER BY end_time DESC,fire_id ASC',params)
+            selected=[];count=0
+            for row in rows:
+                if area.contains(row['lat'],row['lon']):
+                    if offset<=count<offset+limit: selected.append(row)
+                    count+=1
+            if selected:
+                ids=[row['fire_id'] for row in selected]
+                marks=','.join('?' for _ in ids)
+                payloads={json.loads(row['payload'])['fire_id']:row for row in con.execute('SELECT payload FROM events WHERE fire_id IN ('+marks+')',ids)}
+                data=[describe(payloads[fire_id],con,meta) for fire_id in ids]
+            else: data=[]
+            if geometry:
+                shapes=search_footprints(con,[event['fire_id'] for event in data],payload.bbox if simplify_footprints else None)
+                for event in data:event['footprint']=shapes.get(event['fire_id'])
+            return {**meta,'data':data,'count':count,'limit':limit,'offset':offset,'has_more':offset+len(data)<count,'basis':'event centroid inside selected area; exact containment before pagination'}
         stage=perf_counter()
         where,params=event_candidates(con,area.bbox)
         candidate_where,candidate_params=where,list(params)
@@ -229,7 +270,7 @@ def footprint(con,fire_id):
 def search_footprints(con,fire_ids,simplify_bbox=None):
     shapes={}
     if not fire_ids:return shapes
-    exists=con.execute("SELECT 1 FROM sqlite_master WHERE name='footprints'").fetchone()
+    exists=True if getattr(con,"postgres",False) else con.execute("SELECT 1 FROM sqlite_master WHERE name='footprints'").fetchone()
     if not exists:return shapes
     for start in range(0,len(fire_ids),400):
         ids=fire_ids[start:start+400];marks=','.join('?' for _ in ids)

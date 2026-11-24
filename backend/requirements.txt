@@ -24,3 +24,5 @@ global-land-mask==1.0.0
 powerlaw
 folium
 contextily
+
+pg8000>=1.31,<2
